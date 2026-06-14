@@ -3,104 +3,212 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Constellation Giveaway</title>
+<title>Constellation Hub</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-/* ── SUGGESTION DROPDOWN ───────────────────────────────── */
-.cc-input-wrap { position: relative; }
-.cc-input { width: 100%; box-sizing: border-box; }
-.reward-suggestions {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 9999;
-  background: #0a0e14;
-  border: 1px solid rgba(0,212,255,0.35);
-  border-top: none;
-  border-radius: 0 0 4px 4px;
-  max-height: 180px;
-  overflow-y: auto;
-  display: none;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+:root {
+  --bg: #060a0e; --bg2: #0a0e14; --bg3: #0d1318;
+  --accent: #00d4ff; --accent2: #ffd700; --accent3: #39ff14; --purple: #bf5fff;
+  --danger: #ff3344; --gold: #ffd700; --green: #39ff14; --orange: #ff6b35;
+  --text: #c8dde8; --text2: #5a7a8a; --text3: #3a5060;
+  --border: rgba(0,212,255,0.15); --border2: rgba(0,212,255,0.08);
 }
-.reward-suggestions.open { display: block; }
-.sug-item {
-  padding: 7px 10px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  color: #a0c8d8;
-  cursor: pointer;
-  border-bottom: 1px solid rgba(0,212,255,0.08);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: background 0.1s;
-}
-.sug-item:hover, .sug-item.active { background: rgba(0,212,255,0.12); color: #00d4ff; }
-.sug-item:last-child { border-bottom: none; }
-.sug-category {
-  padding: 4px 10px;
-  font-family: 'Orbitron', monospace;
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: rgba(0,212,255,0.35);
-  background: rgba(0,0,0,0.3);
-  border-bottom: 1px solid rgba(0,212,255,0.08);
-  pointer-events: none;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Share Tech Mono', monospace; min-height: 100vh; }
+.scanline { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px); pointer-events: none; z-index: 9999; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px 60px; }
 
-/* ── REVEALED REWARD CARD (player post-game) ───────────── */
-.reveal-banner {
-  margin: 0 0 18px 0;
-  padding: 14px 18px;
-  background: linear-gradient(135deg, rgba(57,255,20,0.08), rgba(255,215,0,0.06));
-  border: 1px solid rgba(57,255,20,0.35);
-  border-radius: 4px;
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 11px;
-  color: #39ff14;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.reveal-banner .rb-icon { font-size: 20px; }
-.win-panel {
-  background: linear-gradient(135deg, rgba(255,215,0,0.07), rgba(0,212,255,0.04));
-  border: 1px solid rgba(255,215,0,0.4);
-  border-radius: 6px;
-  padding: 20px;
-  margin-bottom: 18px;
-  text-align: center;
-}
-.win-panel .wp-title {
-  font-family: 'Orbitron', monospace;
-  font-size: 11px;
-  letter-spacing: 3px;
-  color: rgba(255,215,0,0.6);
-  margin-bottom: 6px;
-}
-.win-panel .wp-reward {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 22px;
-  color: #ffd700;
-  text-shadow: 0 0 20px rgba(255,215,0,0.5);
-  word-break: break-word;
-}
-.win-panel .wp-const {
-  font-family: 'Share Tech Mono', monospace;
-  font-size: 10px;
-  color: rgba(255,255,255,0.35);
-  margin-top: 8px;
-}
-.panel,
-.panel-body,
-.const-grid,
-.const-card,
-.cc-input-wrap {
-    overflow: visible !important;
-}
+/* HEADER */
+header { position: relative; text-align: center; padding: 40px 0 28px; border-bottom: 1px solid var(--border); margin-bottom: 24px; overflow: hidden; }
+header h1 { font-family: 'Orbitron', monospace; font-size: clamp(18px, 4vw, 32px); font-weight: 900; letter-spacing: 6px; color: #e8f4ff; text-shadow: 0 0 30px rgba(0,212,255,0.4); }
+header h1 span { color: var(--accent); }
+header .subtitle { font-size: 10px; letter-spacing: 3px; color: var(--text2); margin-top: 8px; }
+
+/* LOGIN */
+.login-wrap { display: flex; justify-content: center; padding: 40px 16px; }
+.login-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; width: 100%; max-width: 420px; overflow: hidden; }
+.login-tabs { display: flex; border-bottom: 1px solid var(--border); }
+.login-tab { flex: 1; padding: 12px; background: transparent; border: none; color: var(--text2); font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; cursor: pointer; transition: all .2s; }
+.login-tab.active { color: var(--accent); background: rgba(0,212,255,0.05); border-bottom: 2px solid var(--accent); }
+.login-body { padding: 24px; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 9px; letter-spacing: 2px; color: var(--text2); margin-bottom: 6px; }
+.field input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 12px; padding: 10px 12px; outline: none; transition: border-color .2s; }
+.field input:focus { border-color: var(--accent); }
+.login-err { display: none; color: var(--danger); font-size: 10px; margin: 8px 0; padding: 8px; border: 1px solid rgba(255,51,68,0.3); border-radius: 3px; background: rgba(255,51,68,0.05); }
+.btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.btn { padding: 10px 18px; border-radius: 3px; border: 1px solid; font-family: 'Share Tech Mono', monospace; font-size: 11px; cursor: pointer; transition: all .2s; background: transparent; letter-spacing: 1px; }
+.btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn-cyan { color: var(--accent); border-color: rgba(0,212,255,0.5); }
+.btn-cyan:hover { background: rgba(0,212,255,0.08); }
+.btn-gold { color: var(--gold); border-color: rgba(255,215,0,0.5); }
+.btn-gold:hover { background: rgba(255,215,0,0.08); }
+.btn-green { color: var(--green); border-color: rgba(57,255,20,0.5); }
+.btn-green:hover { background: rgba(57,255,20,0.08); }
+.btn-orange { color: var(--orange); border-color: rgba(255,107,53,0.5); }
+.btn-orange:hover { background: rgba(255,107,53,0.08); }
+.btn-purple { color: var(--purple); border-color: rgba(191,95,255,0.5); }
+.btn-purple:hover { background: rgba(191,95,255,0.08); }
+.btn-danger { color: var(--danger); border-color: rgba(255,51,68,0.4); }
+.btn-danger:hover { background: rgba(255,51,68,0.08); }
+.btn-sm { font-size: 9px; padding: 6px 12px; }
+
+/* IDENTITY BAR */
+.identity-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 18px; flex-wrap: wrap; }
+.id-badge { font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; padding: 3px 8px; border: 1px solid var(--accent); border-radius: 2px; color: var(--accent); }
+.id-label { font-size: 9px; color: var(--text2); letter-spacing: 1px; }
+.id-val { font-size: 11px; color: var(--text); }
+
+/* PANEL */
+.panel { background: var(--bg2); border: 1px solid var(--border); border-radius: 5px; margin-bottom: 20px; overflow: visible; }
+.panel-hd { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border2); flex-wrap: wrap; }
+.ph-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px rgba(0,212,255,0.5); flex-shrink: 0; }
+.rt-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 10px rgba(255,51,68,0.5); flex-shrink: 0; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.ph-title { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px; color: #c8dde8; flex: 1; }
+.ph-badge { font-size: 9px; letter-spacing: 2px; padding: 3px 8px; border: 1px solid var(--accent); border-radius: 2px; color: var(--accent); white-space: nowrap; }
+.panel-body { padding: 16px; }
+
+/* MODE SELECTOR */
+.mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.mode-card { background: var(--bg3); border: 2px solid var(--border2); border-radius: 6px; padding: 24px; cursor: pointer; transition: all .25s; text-align: center; }
+.mode-card:hover { border-color: rgba(0,212,255,0.4); background: rgba(0,212,255,0.04); }
+.mode-card.selected { border-color: var(--accent); background: rgba(0,212,255,0.08); }
+.mode-card.selected-quiz { border-color: var(--purple); background: rgba(191,95,255,0.08); }
+.mode-icon { font-size: 32px; margin-bottom: 10px; }
+.mode-title { font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: 3px; color: #e8f4ff; margin-bottom: 6px; }
+.mode-desc { font-size: 10px; color: var(--text2); line-height: 1.6; }
+
+/* COUNT ROW */
+.count-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.count-label { font-size: 10px; letter-spacing: 2px; color: var(--text2); }
+.count-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.count-btn { padding: 4px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 2px; color: var(--text2); font-family: 'Share Tech Mono', monospace; font-size: 11px; cursor: pointer; transition: all .15s; }
+.count-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.08); }
+
+/* PROGRESS */
+.prog-row { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.prog-label { font-size: 9px; letter-spacing: 2px; color: var(--text2); white-space: nowrap; }
+.prog-bar { flex: 1; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--green)); border-radius: 2px; transition: width .3s; }
+.prog-count { font-size: 10px; color: var(--accent); white-space: nowrap; }
+
+/* CONSTELLATION GRID */
+.const-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; margin-bottom: 16px; overflow: visible; }
+.const-card { background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; overflow: visible; transition: border-color .2s; }
+.cc-head { display: flex; gap: 12px; padding: 10px; }
+.cc-canvas { flex-shrink: 0; border-radius: 3px; }
+.cc-info { flex: 1; min-width: 0; }
+.cc-num { font-size: 9px; letter-spacing: 2px; margin-bottom: 3px; }
+.cc-name { font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; letter-spacing: 2px; margin-bottom: 2px; }
+.cc-latin { font-size: 9px; margin-bottom: 6px; }
+.cc-input-wrap { position: relative; overflow: visible; }
+.cc-input { width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: 3px; color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 11px; padding: 7px 10px; outline: none; transition: border-color .2s; }
+.cc-input:focus { border-color: rgba(0,212,255,0.5); }
+.cc-input.filled { border-color: rgba(57,255,20,0.35); color: var(--green); }
+.reward-suggestions { position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: #0a0e14; border: 1px solid rgba(0,212,255,0.35); border-top: none; border-radius: 0 0 4px 4px; max-height: 180px; overflow-y: auto; display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.7); }
+.reward-suggestions.open { display: block; }
+.sug-item { padding: 7px 10px; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: #a0c8d8; cursor: pointer; border-bottom: 1px solid rgba(0,212,255,0.08); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background 0.1s; }
+.sug-item:hover,.sug-item.active { background: rgba(0,212,255,0.12); color: #00d4ff; }
+.sug-category { padding: 4px 10px; font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 2px; color: rgba(0,212,255,0.35); background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(0,212,255,0.08); pointer-events: none; }
+.cc-claim-footer { padding: 10px; border-top: 1px solid var(--border2); }
+.slots-bar { font-size: 9px; color: var(--text2); letter-spacing: 1px; margin-bottom: 6px; }
+.cc-claimers { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.claimer-chip { font-size: 10px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 2px; color: var(--text2); }
+.claimer-chip.you { border-color: rgba(57,255,20,0.4); color: var(--green); }
+.claim-btn { width: 100%; padding: 8px; background: transparent; border: 1px solid rgba(0,212,255,0.35); border-radius: 3px; color: var(--accent); font-family: 'Share Tech Mono', monospace; font-size: 10px; cursor: pointer; transition: all .2s; letter-spacing: 1px; }
+.claim-btn:hover:not(:disabled) { background: rgba(0,212,255,0.08); }
+.claim-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.claim-btn.unclaim { border-color: rgba(255,51,68,0.35); color: var(--danger); }
+.claim-btn.unclaim:hover { background: rgba(255,51,68,0.06); }
+.claim-btn.full-btn { border-color: rgba(255,51,68,0.3); color: rgba(255,51,68,0.6); }
+.info-msg { padding: 10px 14px; background: rgba(0,212,255,0.05); border: 1px solid var(--border); border-radius: 3px; font-size: 11px; color: var(--accent); margin-bottom: 14px; }
+
+/* WARN */
+.warn { display: none; padding: 8px 12px; background: rgba(255,51,68,0.06); border: 1px solid rgba(255,51,68,0.3); border-radius: 3px; color: var(--danger); font-size: 10px; margin: 10px 0; }
+
+/* STATUS */
+.status-chip { display: inline-block; padding: 3px 8px; border-radius: 2px; font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; }
+.status-active { background: rgba(57,255,20,0.1); border: 1px solid rgba(57,255,20,0.4); color: var(--green); }
+.status-inactive { background: rgba(255,51,68,0.1); border: 1px solid rgba(255,51,68,0.4); color: var(--danger); }
+.game-status-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: rgba(57,255,20,0.04); border: 1px solid rgba(57,255,20,0.2); border-radius: 3px; margin-bottom: 14px; flex-wrap: wrap; font-size: 10px; }
+.gs-label { color: var(--text2); }
+.gs-val { color: var(--green); font-family: 'Orbitron', monospace; font-size: 10px; }
+
+/* IMAGE OUTPUT */
+.out-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.out-tab { padding: 6px 14px; background: transparent; border: 1px solid var(--border2); border-radius: 2px; color: var(--text2); font-family: 'Share Tech Mono', monospace; font-size: 10px; cursor: pointer; transition: all .15s; }
+.out-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,0.06); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.canvas-frame { background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; padding: 12px; margin-bottom: 12px; }
+.canvas-label { font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
+.canvas-frame canvas { max-width: 100%; display: block; }
+.canvas-hint { font-size: 9px; color: var(--text3); margin-top: 8px; }
+
+/* ADMIN TABLE */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.admin-table th { font-family: 'Orbitron', monospace; font-size: 8px; letter-spacing: 2px; color: var(--text2); border-bottom: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+.admin-table td { padding: 9px 10px; border-bottom: 1px solid var(--border2); vertical-align: top; }
+.admin-table tr:last-child td { border-bottom: none; }
+.claim-tag { display: inline-block; padding: 3px 8px; margin: 2px; border: 1px solid var(--border); border-radius: 2px; font-size: 10px; }
+.empty-dash { color: var(--text3); font-size: 10px; }
+
+/* LOADING */
+.loading-msg { padding: 30px; text-align: center; color: var(--text2); font-size: 11px; letter-spacing: 2px; }
+
+/* WIN PANEL */
+.reveal-banner { margin: 0 0 18px; padding: 14px 18px; background: linear-gradient(135deg,rgba(57,255,20,0.08),rgba(255,215,0,0.06)); border: 1px solid rgba(57,255,20,0.35); border-radius: 4px; font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 10px; }
+.rb-icon { font-size: 20px; }
+.win-panel { background: linear-gradient(135deg,rgba(255,215,0,0.07),rgba(0,212,255,0.04)); border: 1px solid rgba(255,215,0,0.4); border-radius: 6px; padding: 20px; margin-bottom: 18px; text-align: center; }
+.win-panel .wp-title { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; color: rgba(255,215,0,0.6); margin-bottom: 6px; }
+.win-panel .wp-reward { font-family: 'Share Tech Mono', monospace; font-size: 22px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.5); word-break: break-word; }
+.win-panel .wp-const { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 8px; }
+
+/* QUIZ STYLES */
+.quiz-config { background: var(--bg3); border: 1px solid rgba(191,95,255,0.2); border-radius: 4px; padding: 16px; margin-bottom: 16px; }
+.quiz-config-title { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 3px; color: var(--purple); margin-bottom: 12px; }
+.quiz-progress { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: rgba(191,95,255,0.05); border: 1px solid rgba(191,95,255,0.2); border-radius: 3px; margin-bottom: 16px; flex-wrap: wrap; }
+.quiz-q-card { background: var(--bg3); border: 1px solid rgba(191,95,255,0.2); border-radius: 5px; padding: 20px; margin-bottom: 14px; }
+.quiz-q-num { font-size: 9px; letter-spacing: 2px; color: var(--purple); margin-bottom: 10px; }
+.quiz-q-text { font-size: 14px; color: #e8f4ff; line-height: 1.6; margin-bottom: 16px; }
+.quiz-options { display: flex; flex-direction: column; gap: 8px; }
+.quiz-opt { padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: 3px; color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 12px; cursor: pointer; transition: all .15s; text-align: left; width: 100%; }
+.quiz-opt:hover:not(:disabled) { border-color: rgba(191,95,255,0.4); color: var(--purple); background: rgba(191,95,255,0.05); }
+.quiz-opt.correct { border-color: rgba(57,255,20,0.5); color: var(--green); background: rgba(57,255,20,0.06); }
+.quiz-opt.wrong { border-color: rgba(255,51,68,0.5); color: var(--danger); background: rgba(255,51,68,0.06); }
+.quiz-opt:disabled { cursor: not-allowed; }
+.quiz-feedback { padding: 10px 14px; border-radius: 3px; font-size: 11px; margin-top: 10px; }
+.quiz-feedback.correct { background: rgba(57,255,20,0.06); border: 1px solid rgba(57,255,20,0.3); color: var(--green); }
+.quiz-feedback.wrong { background: rgba(255,51,68,0.06); border: 1px solid rgba(255,51,68,0.3); color: var(--danger); }
+.quiz-score-display { text-align: center; padding: 30px; }
+.quiz-score-num { font-family: 'Orbitron', monospace; font-size: 48px; font-weight: 900; color: var(--purple); text-shadow: 0 0 30px rgba(191,95,255,0.4); }
+.quiz-score-label { font-size: 10px; letter-spacing: 3px; color: var(--text2); margin-top: 6px; }
+.leaderboard-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border2); }
+.leaderboard-row:last-child { border-bottom: none; }
+.lb-rank { font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 700; min-width: 32px; text-align: center; }
+.lb-rank.gold { color: var(--gold); text-shadow: 0 0 10px rgba(255,215,0,0.4); }
+.lb-rank.silver { color: #c0c0c0; }
+.lb-rank.bronze { color: #cd7f32; }
+.lb-name { flex: 1; font-size: 13px; color: #e8f4ff; }
+.lb-score { font-family: 'Orbitron', monospace; font-size: 14px; color: var(--purple); }
+.lb-reward { font-size: 11px; color: var(--gold); max-width: 200px; text-align: right; }
+.lb-time { font-size: 9px; color: var(--text3); }
+.reward-pill { display: inline-block; padding: 3px 10px; background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.3); border-radius: 2px; font-size: 10px; color: var(--gold); margin-top: 4px; }
+.timer-bar { height: 3px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-top: 10px; }
+.timer-fill { height: 100%; background: linear-gradient(90deg,var(--purple),var(--accent)); border-radius: 2px; transition: width .1s linear; }
+.player-reward-win { text-align: center; padding: 24px 16px; background: linear-gradient(135deg,rgba(191,95,255,0.06),rgba(255,215,0,0.04)); border: 1px solid rgba(191,95,255,0.3); border-radius: 6px; margin-bottom: 16px; }
+.player-reward-win .prw-title { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 3px; color: var(--purple); margin-bottom: 8px; }
+.player-reward-win .prw-reward { font-size: 20px; color: var(--gold); text-shadow: 0 0 16px rgba(255,215,0,0.4); margin-bottom: 6px; }
+.player-reward-win .prw-rank { font-size: 10px; color: var(--text2); }
+
+/* PLAYER REWARD POOL */
+.canvas-frame canvas { max-width: 100%; display: block; }
+
+/* MISC */
+.section-divider { border-top: 1px solid var(--border2); margin: 16px 0; }
 </style>
 </head>
 <body>
@@ -109,8 +217,8 @@
 
 <header>
   <canvas id="headerStars" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas>
-  <h1>CONSTELLATION <span>GIVEAWAY</span></h1>
-  <p class="subtitle">// STELLAR DISTRIBUTION PROTOCOL — ASSIGN REWARDS TO STAR SYSTEMS</p>
+  <h1>CONSTELLATION <span>HUB</span></h1>
+  <p class="subtitle">// OPEN GALAXY EVENT PLATFORM — GIVEAWAY &amp; QUIZ SYSTEM</p>
 </header>
 
 <!-- LOGIN SCREEN -->
@@ -122,28 +230,15 @@
         <button class="login-tab" onclick="switchLoginTab('admin',event)">⬡ ADMIN ACCESS</button>
       </div>
       <div id="loginTabPlayer" class="login-body">
-        <div class="field">
-          <label>GAME USERNAME</label>
-          <input id="playerName" type="text" placeholder="Enter your Open Galaxy username" />
-        </div>
-        <div class="field">
-          <label>GAME ID</label>
-          <input id="playerId" type="text" placeholder="Enter your game ID" />
-        </div>
+        <div class="field"><label>GAME USERNAME</label><input id="playerName" type="text" placeholder="Enter your Open Galaxy username" /></div>
+        <div class="field"><label>GAME ID</label><input id="playerId" type="text" placeholder="Enter your game ID" /></div>
         <div id="playerErr" class="login-err">⚠ Enter both username and Game ID.</div>
-        <div class="btn-row">
-          <button class="btn btn-cyan" onclick="loginPlayer()">→ ENTER GAME</button>
-        </div>
+        <div class="btn-row"><button class="btn btn-cyan" onclick="loginPlayer()">→ ENTER GAME</button></div>
       </div>
       <div id="loginTabAdmin" class="login-body" style="display:none;">
-        <div class="field">
-          <label>ADMIN PASSWORD</label>
-          <input id="adminPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')loginAdmin()" />
-        </div>
+        <div class="field"><label>ADMIN PASSWORD</label><input id="adminPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')loginAdmin()" /></div>
         <div id="adminErr" class="login-err">⚠ Incorrect password.</div>
-        <div class="btn-row">
-          <button class="btn btn-gold" onclick="loginAdmin()">⬡ ACCESS ADMIN PANEL</button>
-        </div>
+        <div class="btn-row"><button class="btn btn-gold" onclick="loginAdmin()">⬡ ACCESS ADMIN PANEL</button></div>
       </div>
     </div>
   </div>
@@ -151,124 +246,173 @@
 
 <!-- MAIN APP -->
 <div id="mainApp" style="display:none;">
-
-  <!-- Identity Bar -->
   <div class="identity-bar" id="identityBar"></div>
 
-  <!-- ADMIN SECTION -->
+  <!-- ═══════════════ ADMIN SECTION ═══════════════ -->
   <div id="adminSection" style="display:none;">
-    <div class="panel">
+
+    <!-- MODE SELECTION -->
+    <div class="panel" id="modePanel">
       <div class="panel-hd">
-        <div class="ph-dot" style="background:var(--gold);box-shadow:0 0 14px rgba(255,215,0,0.4);"></div>
-        <div class="ph-title">Game Setup</div>
-        <div class="ph-badge" id="rewardBadge">0 / 0 REWARDS SET</div>
-        <div id="gameStatusChip" style="margin-left:8px;"></div>
+        <div class="ph-dot"></div>
+        <div class="ph-title">Event Type</div>
+        <div id="gameStatusChip" style="margin-left:auto;"></div>
       </div>
       <div class="panel-body">
-        <div class="game-status-row" id="gameStatusRow" style="display:none;">
-          <span class="gs-label">ACTIVE GAME ID:</span>
+        <div id="gameStatusRow" style="display:none;" class="game-status-row">
+          <span class="gs-label">ACTIVE GAME:</span>
           <span class="gs-val" id="activeGameId">—</span>
+          <span class="gs-label" style="margin-left:10px;">TYPE:</span>
+          <span class="gs-val" id="activeGameType">—</span>
           <span class="gs-label" style="margin-left:10px;">PLAYERS:</span>
           <span class="gs-val" id="activePlayers">0</span>
-          <span class="gs-label" style="margin-left:10px;">CLAIMS:</span>
-          <span class="gs-val" id="activeClaims">0</span>
           <button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="clearGame()">✕ END GAME</button>
         </div>
-        <div class="count-row">
-          <span class="count-label">STAR SYSTEMS :</span>
-          <div class="count-btns" id="countBtns"></div>
+        <div class="mode-selector" id="modeSelectorDiv">
+          <div class="mode-card" id="modeCardGiveaway" onclick="selectMode('giveaway')">
+            <div class="mode-icon">🌟</div>
+            <div class="mode-title">CONSTELLATION GIVEAWAY</div>
+            <div class="mode-desc">Players claim a star system. Rewards hidden until reveal. Up to 3 players per constellation.</div>
+          </div>
+          <div class="mode-card" id="modeCardQuiz" onclick="selectMode('quiz')">
+            <div class="mode-icon">🧠</div>
+            <div class="mode-title">COMMANDER QUIZ</div>
+            <div class="mode-desc">10 random questions about commanders. Top 10 scorers each win a random reward from the prize pool.</div>
+          </div>
         </div>
-        <div class="prog-row">
-          <span class="prog-label">REWARD MANIFEST</span>
-          <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
-          <span class="prog-count" id="progCount">0/0</span>
+        <div id="modeSelectedLabel" style="display:none;font-size:10px;color:var(--text2);letter-spacing:2px;margin-bottom:14px;"></div>
+      </div>
+    </div>
+
+    <!-- ──── GIVEAWAY SETUP ──── -->
+    <div id="giveawaySetup" style="display:none;">
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:var(--gold);box-shadow:0 0 14px rgba(255,215,0,0.4);"></div>
+          <div class="ph-title">Constellation Giveaway Setup</div>
+          <div class="ph-badge" id="rewardBadge">0 / 0 REWARDS SET</div>
         </div>
-        <div class="const-grid" id="constGrid"></div>
-        <div id="setupWarn" class="warn">⚠ ENTER ALL REWARDS BEFORE PUBLISHING</div>
-        <div class="btn-row">
-          <button class="btn btn-cyan" onclick="reroll()">↺ REROLL SYSTEMS</button>
-          <button class="btn btn-green" onclick="publishGame()">⬡ PUBLISH GAME</button>
-          <button class="btn btn-orange" onclick="generateImages()">⚡ GENERATE IMAGES</button>
-          <button class="btn btn-purple btn-sm" onclick="clearRewards()">✕ CLEAR REWARDS</button>
+        <div class="panel-body">
+          <div class="count-row">
+            <span class="count-label">STAR SYSTEMS :</span>
+            <div class="count-btns" id="countBtns"></div>
+          </div>
+          <div class="prog-row">
+            <span class="prog-label">REWARD MANIFEST</span>
+            <div class="prog-bar"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+            <span class="prog-count" id="progCount">0/0</span>
+          </div>
+          <div class="const-grid" id="constGrid"></div>
+          <div id="setupWarn" class="warn">⚠ ENTER ALL REWARDS BEFORE PUBLISHING</div>
+          <div class="btn-row">
+            <button class="btn btn-cyan" onclick="reroll()">↺ REROLL SYSTEMS</button>
+            <button class="btn btn-green" onclick="publishGame()">⬡ PUBLISH GIVEAWAY</button>
+            <button class="btn btn-orange" onclick="generateImages()">⚡ GENERATE IMAGES</button>
+            <button class="btn btn-purple btn-sm" onclick="clearRewards()">✕ CLEAR REWARDS</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN DASHBOARD -->
+      <div class="panel" id="adminDashPanel" style="display:none;">
+        <div class="panel-hd">
+          <div class="rt-dot"></div>
+          <div class="ph-title">Live Claims Dashboard</div>
+          <div class="ph-badge" id="dashBadge">LIVE</div>
+        </div>
+        <div class="panel-body" id="dashBody"><div class="loading-msg">LOADING CLAIMS DATA...</div></div>
+      </div>
+
+      <!-- IMAGE OUTPUT -->
+      <div class="panel" id="outPanel" style="display:none;">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:var(--gold);box-shadow:0 0 14px rgba(255,215,0,0.45);"></div>
+          <div class="ph-title">Image Transmission Ready</div>
+          <div class="ph-badge" id="imgCount">3 IMAGES GENERATED</div>
+        </div>
+        <div class="panel-body">
+          <div class="out-tabs">
+            <button class="out-tab active" onclick="switchTab('mystery',event)">◈ MYSTERY</button>
+            <button class="out-tab" onclick="switchTab('reveal',event)">◉ REVEAL</button>
+            <button class="out-tab" onclick="switchTab('rewards',event)">✦ REWARDS ONLY</button>
+          </div>
+          <div class="tab-pane active" id="tab-mystery">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:12px;padding:9px 12px;border-left:2px solid var(--accent);background:rgba(0,212,255,0.04);">▶ POST IN DISCORD — Players claim a constellation by number. Rewards stay hidden until reveal.</div>
+            <div class="canvas-frame"><div class="canvas-label">◈ Mystery Transmission</div><canvas id="cvMystery"></canvas><div class="canvas-hint">// Star systems visible — reward data encrypted</div></div>
+            <div class="btn-row">
+              <button class="btn btn-cyan btn-sm" onclick="dlCanvas('cvMystery','mystery-constellations')">⬇ DOWNLOAD</button>
+              <button class="btn btn-gold btn-sm" onclick="copyCanvas('cvMystery','btn1')" id="btn1">⎘ COPY</button>
+            </div>
+          </div>
+          <div class="tab-pane" id="tab-reveal">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:12px;padding:9px 12px;border-left:2px solid var(--gold);background:rgba(255,215,0,0.04);">▶ REVEAL AFTER GAME ENDS — Shows which reward belongs to each constellation.</div>
+            <div class="canvas-frame"><div class="canvas-label" style="color:var(--gold);">◉ Reward Manifest — Full Reveal</div><canvas id="cvReveal"></canvas><div class="canvas-hint">// Full reward manifest decrypted</div></div>
+            <div class="btn-row">
+              <button class="btn btn-gold btn-sm" onclick="dlCanvas('cvReveal','reveal-constellations')">⬇ DOWNLOAD</button>
+              <button class="btn btn-cyan btn-sm" onclick="copyCanvas('cvReveal','btn2')" id="btn2">⎘ COPY</button>
+            </div>
+          </div>
+          <div class="tab-pane" id="tab-rewards">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:12px;padding:9px 12px;border-left:2px solid var(--purple);background:rgba(191,95,255,0.04);">▶ REWARDS SHUFFLED — Same rewards listed in random order, no constellation link visible.</div>
+            <div class="canvas-frame"><div class="canvas-label" style="color:var(--purple);">✦ Reward Pool — Shuffled</div><canvas id="cvRewards"></canvas><div class="canvas-hint">// Reward pool visible — constellation mapping hidden</div></div>
+            <div class="btn-row">
+              <button class="btn btn-purple btn-sm" onclick="dlCanvas('cvRewards','rewards-shuffled')">⬇ DOWNLOAD</button>
+              <button class="btn btn-cyan btn-sm" onclick="copyCanvas('cvRewards','btn3')" id="btn3">⎘ COPY</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ADMIN DASHBOARD -->
-    <div class="panel" id="adminDashPanel" style="display:none;">
-      <div class="panel-hd">
-        <div class="rt-dot"></div>
-        <div class="ph-title">Live Claims Dashboard</div>
-        <div class="ph-badge" id="dashBadge">LIVE</div>
+    <!-- ──── QUIZ SETUP ──── -->
+    <div id="quizSetup" style="display:none;">
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:var(--purple);box-shadow:0 0 14px rgba(191,95,255,0.4);"></div>
+          <div class="ph-title">Commander Quiz Setup</div>
+          <div class="ph-badge" style="border-color:var(--purple);color:var(--purple);" id="quizSetupBadge">10 QUESTIONS · TOP 10 WIN</div>
+        </div>
+        <div class="panel-body">
+          <div class="count-row" style="margin-bottom:16px;">
+            <span class="count-label">QUESTIONS :</span>
+            <div class="count-btns" id="quizQCountBtns"></div>
+          </div>
+          <div class="quiz-config">
+            <div class="quiz-config-title" id="quizPrizeTitle">▶ PRIZE POOL — TOP 10 SCORERS EACH WIN ONE</div>
+            <div class="prog-row">
+              <span class="prog-label">PRIZES SET</span>
+              <div class="prog-bar"><div class="prog-fill" id="quizProgFill" style="width:0%;background:linear-gradient(90deg,var(--purple),var(--accent));"></div></div>
+              <span class="prog-count" id="quizProgCount" style="color:var(--purple);">0/10</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;" id="quizPrizeGrid"></div>
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn btn-purple btn-sm" onclick="clearQuizPrizes()">✕ CLEAR PRIZES</button>
+            </div>
+          </div>
+          <div id="quizSetupWarn" class="warn">⚠ SET ALL 10 PRIZES BEFORE PUBLISHING</div>
+          <div class="btn-row">
+            <button class="btn btn-purple" onclick="publishQuiz()">⬡ PUBLISH QUIZ</button>
+          </div>
+        </div>
       </div>
-      <div class="panel-body" id="dashBody">
-        <div class="loading-msg">LOADING CLAIMS DATA...</div>
+
+      <!-- QUIZ LIVE DASHBOARD -->
+      <div class="panel" id="quizDashPanel" style="display:none;">
+        <div class="panel-hd">
+          <div class="rt-dot"></div>
+          <div class="ph-title">Live Quiz Leaderboard</div>
+          <div class="ph-badge" style="border-color:var(--purple);color:var(--purple);">LIVE</div>
+        </div>
+        <div class="panel-body" id="quizDashBody"><div class="loading-msg">WAITING FOR PLAYERS...</div></div>
       </div>
     </div>
 
-    <!-- IMAGE OUTPUT -->
-    <div class="panel" id="outPanel" style="display:none;">
-      <div class="panel-hd">
-        <div class="ph-dot" style="background:var(--gold);box-shadow:0 0 14px rgba(255,215,0,0.45);"></div>
-        <div class="ph-title">Image Transmission Ready</div>
-        <div class="ph-badge" id="imgCount">3 IMAGES GENERATED</div>
-      </div>
-      <div class="panel-body">
-        <div class="out-tabs">
-          <button class="out-tab active" onclick="switchTab('mystery',event)">◈ MYSTERY</button>
-          <button class="out-tab" onclick="switchTab('reveal',event)">◉ REVEAL</button>
-          <button class="out-tab" onclick="switchTab('rewards',event)">✦ REWARDS ONLY</button>
-        </div>
-        <div class="tab-pane active" id="tab-mystery">
-          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:12px;padding:9px 12px;border-left:2px solid var(--accent);background:rgba(0,212,255,0.04);">
-            ▶ POST IN DISCORD — Players claim a constellation by number. Rewards stay hidden until reveal.
-          </div>
-          <div class="canvas-frame">
-            <div class="canvas-label">◈ Mystery Transmission</div>
-            <canvas id="cvMystery"></canvas>
-            <div class="canvas-hint">// Star systems visible — reward data encrypted</div>
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-cyan btn-sm" onclick="dlCanvas('cvMystery','mystery-constellations')">⬇ DOWNLOAD</button>
-            <button class="btn btn-gold btn-sm" onclick="copyCanvas('cvMystery','btn1')" id="btn1">⎘ COPY</button>
-          </div>
-        </div>
-        <div class="tab-pane" id="tab-reveal">
-          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:12px;padding:9px 12px;border-left:2px solid var(--gold);background:rgba(255,215,0,0.04);">
-            ▶ REVEAL AFTER GAME ENDS — Shows which reward belongs to each constellation.
-          </div>
-          <div class="canvas-frame">
-            <div class="canvas-label" style="color:var(--gold);">◉ Reward Manifest — Full Reveal</div>
-            <canvas id="cvReveal"></canvas>
-            <div class="canvas-hint">// Full reward manifest decrypted</div>
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-gold btn-sm" onclick="dlCanvas('cvReveal','reveal-constellations')">⬇ DOWNLOAD</button>
-            <button class="btn btn-cyan btn-sm" onclick="copyCanvas('cvReveal','btn2')" id="btn2">⎘ COPY</button>
-          </div>
-        </div>
-        <div class="tab-pane" id="tab-rewards">
-          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:12px;padding:9px 12px;border-left:2px solid var(--purple);background:rgba(191,95,255,0.04);">
-            ▶ REWARDS SHUFFLED — Same rewards listed in random order, no constellation link visible.
-          </div>
-          <div class="canvas-frame">
-            <div class="canvas-label" style="color:var(--purple);">✦ Reward Pool — Shuffled</div>
-            <canvas id="cvRewards"></canvas>
-            <div class="canvas-hint">// Reward pool visible — constellation mapping hidden</div>
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-purple btn-sm" onclick="dlCanvas('cvRewards','rewards-shuffled')">⬇ DOWNLOAD</button>
-            <button class="btn btn-cyan btn-sm" onclick="copyCanvas('cvRewards','btn3')" id="btn3">⎘ COPY</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div><!-- /adminSection -->
 
-  <!-- PLAYER SECTION -->
+  <!-- ═══════════════ PLAYER SECTION ═══════════════ -->
   <div id="playerSection" style="display:none;">
 
-    <!-- Win reveal panel — shown after game ends -->
+    <!-- Win reveal panel (giveaway) -->
     <div id="playerWinPanel" style="display:none;">
       <div class="panel">
         <div class="panel-hd">
@@ -280,8 +424,8 @@
       </div>
     </div>
 
-    <!-- Star Systems panel -->
-    <div class="panel" id="playerStarPanel">
+    <!-- Star Systems panel (giveaway) -->
+    <div class="panel" id="playerStarPanel" style="display:none;">
       <div class="panel-hd">
         <div class="rt-dot"></div>
         <div class="ph-title">Star Systems — Claim Your Constellation</div>
@@ -289,13 +433,11 @@
       </div>
       <div class="panel-body">
         <div id="playerInfoMsg" class="info-msg" style="display:none;"></div>
-        <div class="const-grid" id="playerGrid">
-          <div class="loading-msg">LOADING STAR SYSTEMS...</div>
-        </div>
+        <div class="const-grid" id="playerGrid"><div class="loading-msg">LOADING STAR SYSTEMS...</div></div>
       </div>
     </div>
 
-    <!-- Reward Pool panel -->
+    <!-- Reward Pool panel (giveaway) -->
     <div class="panel" id="playerRewardPanel" style="display:none;">
       <div class="panel-hd">
         <div class="ph-dot" style="background:var(--purple);box-shadow:0 0 14px rgba(191,95,255,0.4);"></div>
@@ -303,14 +445,31 @@
         <div class="ph-badge" style="border-color:var(--purple);color:var(--purple);">PRIZES AVAILABLE</div>
       </div>
       <div class="panel-body">
-        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-bottom:12px;padding:9px 12px;border-left:2px solid var(--purple);background:rgba(191,95,255,0.04);">
-          ▶ ALL PRIZES IN THIS GAME — ORDER RANDOMIZED. Claim a star system to win one.
+        <div class="canvas-frame"><div class="canvas-label" style="color:var(--purple);">✦ Reward Pool — Shuffled</div><canvas id="cvPlayerRewards" style="max-width:100%;display:block;"></canvas><div class="canvas-hint">// Constellation mapping hidden — claim to find out which prize you get</div></div>
+      </div>
+    </div>
+
+    <!-- ──── QUIZ PLAYER PANEL ──── -->
+    <div id="playerQuizPanel" style="display:none;">
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:var(--purple);box-shadow:0 0 14px rgba(191,95,255,0.4);"></div>
+          <div class="ph-title">Commander Quiz</div>
+          <div class="ph-badge" style="border-color:var(--purple);color:var(--purple);" id="quizStatusBadge">LOADING...</div>
         </div>
-        <div class="canvas-frame">
-          <div class="canvas-label" style="color:var(--purple);">✦ Reward Pool — Shuffled</div>
-          <canvas id="cvPlayerRewards" style="max-width:100%;display:block;"></canvas>
-          <div class="canvas-hint">// Constellation mapping hidden — claim to find out which prize you get</div>
+        <div class="panel-body" id="quizPlayerBody">
+          <div class="loading-msg">LOADING QUIZ...</div>
         </div>
+      </div>
+
+      <!-- Quiz result / leaderboard -->
+      <div class="panel" id="playerQuizResultPanel" style="display:none;">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:var(--gold);box-shadow:0 0 14px rgba(255,215,0,0.4);"></div>
+          <div class="ph-title">Quiz Results & Leaderboard</div>
+          <div class="ph-badge" id="quizResultBadge">YOUR SCORE</div>
+        </div>
+        <div class="panel-body" id="playerQuizResultBody"></div>
       </div>
     </div>
 
@@ -319,41 +478,34 @@
 </div><!-- /mainApp -->
 </div><!-- /wrap -->
 
+<script src="mcqdb.js"></script>
 <script>
-// ── CONSTANTS ──────────────────────────────────────────────────────────────────
-const ADMIN_PASS = (() => {
-  const x = [97,109,122,49,50,53];
-  return x.map(c => String.fromCharCode(c)).join('');
-})();
+// ══════════════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════════════
+const ADMIN_PASS = (() => { const x=[97,109,122,49,50,53]; return x.map(c=>String.fromCharCode(c)).join(''); })();
 const MAX_PER_CONSTELLATION = 3;
-const GAME_ID_KEY = 'constgame_active_id';
+const QUIZ_Q_COUNT = 10;
+const QUIZ_TOP_N = 10;
 
-// ── REWARD SUGGESTIONS ─────────────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://brtylfnzrcljicppargr.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydHlsZm56cmNsamljcHBhcmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MjU2OTMsImV4cCI6MjA3NzMwMTY5M30.cUFqyzyOlrJuM_CxdQcokXfj5-5NUnLorIriEHWDl2I';
+
+// ══════════════════════════════════════════════════════
+// REWARD SUGGESTIONS
+// ══════════════════════════════════════════════════════
 const REWARD_SUGGESTIONS = [
-  { category: '9★ COMMANDERS', items: [
-    '9* Dune Enforcers','9* Erebus Errants','9* Rays of Destiny','9* The Dictators',
-    '9* Rex Scuta','9* Death From Above','9* Javal','9* Lumos','9* Eva','9* Rayo','9* Titan'
-  ]},
-  { category: 'LIFE BOATS', items: [
-    'Divine life boat-7','Legendary life boat-7','Super Life Boat-7','life Boat-7'
-  ]},
-  { category: 'CURRENCY & PACKS', items: [
-    '2000 Vouchers Pack','50000 GP','100000 GP','200000 GP','MVP',
-    '1000 Senior Ressources Pack','9999 CG','9999 BADGES','9999 Honor points'
-  ]},
-  { category: 'CHIP MODULES', items: [
-    '5X Orange Deadalus-X','5X Orange Charger-X','5X Orange Negator-X',
-    '5X Orange Caenus-X','5X Orange Accelerator-X','5X Orange Stabilizer-X'
-  ]},
-  { category: 'GEMS', items: [
-    '30X EXP Diamond-V','50X Burning Triad-V','50X Guardian Triad-V','50X Giant Triad-V',
-    '30X Quadra Dodge Ruby-V','30X Quadra Speed Emerald-V','30X Quadra Dodge sapphire-V',
-    '30X Quadra Accuracy Ruby-V','30X Quadra Electron Emerald-V'
-  ]}
+  { category: '9★ COMMANDERS', items: ['9* Dune Enforcers','9* Erebus Errants','9* Rays of Destiny','9* The Dictators','9* Rex Scuta','9* Death From Above','9* Javal','9* Lumos','9* Eva','9* Rayo','9* Titan'] },
+  { category: 'LIFE BOATS', items: ['Divine life boat-7','Legendary life boat-7','Super Life Boat-7','life Boat-7'] },
+  { category: 'CURRENCY & PACKS', items: ['2000 Vouchers Pack','50000 GP','100000 GP','200000 GP','MVP','1000 Senior Ressources Pack','9999 CG','9999 BADGES','9999 Honor points'] },
+  { category: 'CHIP MODULES', items: ['5X Orange Deadalus-X','5X Orange Charger-X','5X Orange Negator-X','5X Orange Caenus-X','5X Orange Accelerator-X','5X Orange Stabilizer-X'] },
+  { category: 'GEMS', items: ['30X EXP Diamond-V','50X Burning Triad-V','50X Guardian Triad-V','50X Giant Triad-V','30X Quadra Dodge Ruby-V','30X Quadra Speed Emerald-V','30X Quadra Dodge sapphire-V','30X Quadra Accuracy Ruby-V','30X Quadra Electron Emerald-V'] }
 ];
-// Flat list for search
 const ALL_SUGGESTIONS_FLAT = REWARD_SUGGESTIONS.flatMap(g => g.items);
 
+// ══════════════════════════════════════════════════════
+// CONSTELLATION DATA
+// ══════════════════════════════════════════════════════
 const ALL_CONSTS = [
   {name:"Orion",latin:"The Hunter",abbr:"Ori",area:"594 sq°",season:"Winter",stars:[[45,30],[75,45],[55,60],[65,75],[40,80],[25,65],[35,50]],lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0],[1,5]]},
   {name:"Ursa Major",latin:"Great Bear",abbr:"UMa",area:"1280 sq°",season:"Spring",stars:[[20,40],[35,30],[55,28],[70,35],[80,55],[65,65],[45,62],[30,55],[50,50]],lines:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0],[2,8],[8,6]]},
@@ -394,34 +546,55 @@ const PALETTES = [
   {accent:'#e040fb',label:'PLASMA'},{accent:'#76ff03',label:'LIME'},{accent:'#ff6584',label:'NOVA'},
 ];
 
-// ── STATE ──────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// QUIZ DATA (from document)
+// ══════════════════════════════════════════════════════
+
+
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
 let sb = null;
 let currentUser = null;
-let chosen = [], rewards = [], N = 10, shuffledRewards = [];
+let currentMode = null; // 'giveaway' | 'quiz'
+
+// Giveaway state
+let chosen = [], rewards = [], N = 10, shuffledRewards = [], mysteryPaletteOrder = [];
 let activeGameId = null;
 let claimsData = [];
 let realtimeChannel = null;
-let adminRefreshTimer = null;
-let mysteryPaletteOrder = [];
 let gameRevealed = false;
 let playerRewardsSeed = null;
 
-const SUPABASE_URL  = 'https://brtylfnzrcljicppargr.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydHlsZm56cmNsamljcHBhcmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MjU2OTMsImV4cCI6MjA3NzMwMTY5M30.cUFqyzyOlrJuM_CxdQcokXfj5-5NUnLorIriEHWDl2I';
+// Quiz state
+let quizQCount = 10; // admin-chosen question count (5–30)
+let quizPrizes = Array(QUIZ_TOP_N).fill('');
+let activeQuizId = null;
+let quizQuestions = [];
+let quizAnswers = [];
+let quizCurrent = 0;
+let quizScore = 0;
+let quizSubmitted = false;
+let quizStartTime = null;
+let quizChannel = null;
 
+// ══════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════
 function initSupabase() {
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
   document.getElementById('loginScreen').style.display = 'block';
 }
 
-// ── LOGIN ──────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// LOGIN
+// ══════════════════════════════════════════════════════
 function switchLoginTab(tab, e) {
   document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
   e.target.classList.add('active');
   document.getElementById('loginTabPlayer').style.display = tab === 'player' ? 'block' : 'none';
   document.getElementById('loginTabAdmin').style.display = tab === 'admin' ? 'block' : 'none';
 }
-
 function loginAdmin() {
   const pass = document.getElementById('adminPass').value;
   const err = document.getElementById('adminErr');
@@ -430,7 +603,6 @@ function loginAdmin() {
   currentUser = { role: 'admin' };
   showApp();
 }
-
 function loginPlayer() {
   const username = document.getElementById('playerName').value.trim();
   const gameId = document.getElementById('playerId').value.trim();
@@ -440,14 +612,12 @@ function loginPlayer() {
   currentUser = { role: 'player', username, gameId };
   showApp();
 }
-
 function showApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = 'block';
-
   const bar = document.getElementById('identityBar');
   if (currentUser.role === 'admin') {
-    bar.innerHTML = `<span class="id-badge">ADMIN</span><span class="id-label">STELLAR DISTRIBUTION CONTROL</span><button class="btn btn-sm" style="margin-left:auto;color:var(--text2);border-color:var(--border2);font-size:9px;" onclick="logout()">LOGOUT</button>`;
+    bar.innerHTML = `<span class="id-badge">ADMIN</span><span class="id-label">STELLAR EVENT CONTROL</span><button class="btn btn-sm" style="margin-left:auto;color:var(--text2);border-color:var(--border2);font-size:9px;" onclick="logout()">LOGOUT</button>`;
     document.getElementById('adminSection').style.display = 'block';
     initAdminSetup();
   } else {
@@ -456,127 +626,166 @@ function showApp() {
     loadPlayerView();
   }
 }
-
 function logout() {
-  currentUser = null; claimsData = []; playerRewardsSeed = null;
+  currentUser = null; claimsData = []; playerRewardsSeed = null; quizPrizes = Array(QUIZ_TOP_N).fill('');
   if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel = null; }
-  if (adminRefreshTimer) { clearInterval(adminRefreshTimer); adminRefreshTimer = null; }
+  if (quizChannel) { sb.removeChannel(quizChannel); quizChannel = null; }
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('adminSection').style.display = 'none';
   document.getElementById('playerSection').style.display = 'none';
-  document.getElementById('playerRewardPanel').style.display = 'none';
-  document.getElementById('playerWinPanel').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'block';
 }
 
-// ── ADMIN SETUP ────────────────────────────────────────────────────────────────
-function initAdminSetup() {
-  pick(); initCountBtns(); renderAdminCards();
-  loadActiveGame();
-}
+// ══════════════════════════════════════════════════════
+// MODE SELECTION
+// ══════════════════════════════════════════════════════
+function selectMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeCardGiveaway').className = 'mode-card' + (mode === 'giveaway' ? ' selected' : '');
+  document.getElementById('modeCardQuiz').className = 'mode-card' + (mode === 'quiz' ? ' selected-quiz' : '');
+  document.getElementById('modeSelectedLabel').style.display = 'block';
+  document.getElementById('modeSelectedLabel').textContent = mode === 'giveaway' ? '▶ CONSTELLATION GIVEAWAY MODE SELECTED' : '▶ COMMANDER QUIZ MODE SELECTED';
 
-function mulberry32(seed) {
-  return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
-}
-function shuffle(a) { return [...a].sort(() => Math.random() - .5); }
-
-function shuffledPaletteIndices() {
-  const idx = Array.from({length: PALETTES.length}, (_, i) => i);
-  for (let i = idx.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [idx[i], idx[j]] = [idx[j], idx[i]];
+  if (mode === 'giveaway') {
+    document.getElementById('giveawaySetup').style.display = 'block';
+    document.getElementById('quizSetup').style.display = 'none';
+    initGiveawaySetup();
+  } else {
+    document.getElementById('quizSetup').style.display = 'block';
+    document.getElementById('giveawaySetup').style.display = 'none';
+    initQuizSetup();
   }
-  return idx;
 }
 
-function pick() { chosen = shuffle(ALL_CONSTS).slice(0, N); rewards = Array(N).fill(''); }
+// ══════════════════════════════════════════════════════
+// ADMIN INIT
+// ══════════════════════════════════════════════════════
+async function initAdminSetup() {
+  // Load active game to detect mode
+  const { data, error } = await sb.from('constellation_games').select('*').eq('data->>active', 'true').order('created_at', { ascending: false }).limit(1);
+  if (!error && data && data.length) {
+    const gd = data[0].data;
+    const detectedMode = gd.mode || 'giveaway';
+    currentMode = detectedMode;
 
+    document.getElementById('activeGameId').textContent = data[0].id;
+    document.getElementById('activeGameType').textContent = detectedMode.toUpperCase();
+    document.getElementById('gameStatusRow').style.display = 'flex';
+    document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-active">LIVE</span>';
+
+    if (detectedMode === 'giveaway') {
+      selectMode('giveaway');
+      activeGameId = data[0].id;
+      N = gd.n;
+      chosen = gd.constellations.map(c => { const full = ALL_CONSTS.find(a => a.name === c.name); return full || c; });
+      rewards = gd.constellations.map(c => c.reward);
+      renderAdminCards();
+      document.getElementById('adminDashPanel').style.display = 'block';
+      loadAdminDashboard();
+      subscribeToClaimsAdmin();
+    } else {
+      selectMode('quiz');
+      activeQuizId = data[0].id;
+      quizPrizes = gd.prizes || [];
+      quizQCount = gd.q_count || 10;
+      renderQuizPrizeGrid();
+      document.getElementById('quizDashPanel').style.display = 'block';
+      loadQuizDashboard();
+      subscribeToQuizAdmin();
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// GIVEAWAY SETUP
+// ══════════════════════════════════════════════════════
+function initGiveawaySetup() {
+  pick(); initCountBtns(); renderAdminCards();
+}
+function mulberry32(seed) { return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return((t^t>>>14)>>>0)/4294967296; }; }
+function shuffle(a) { return [...a].sort(() => Math.random() - .5); }
+function shuffledPaletteIndices() { const idx=Array.from({length:PALETTES.length},(_,i)=>i); for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];} return idx; }
+function pick() { chosen = shuffle(ALL_CONSTS).slice(0, N); rewards = Array(N).fill(''); }
 function initCountBtns() {
   const c = document.getElementById('countBtns'); c.innerHTML = '';
   for (let n = 6; n <= 12; n++) {
     const b = document.createElement('button');
     b.className = 'count-btn' + (n === N ? ' active' : '');
     b.textContent = n;
-    b.onclick = () => {
-      N = n; document.querySelectorAll('.count-btn').forEach(x => x.classList.remove('active'));
-      b.classList.add('active'); pick(); renderAdminCards();
-      document.getElementById('outPanel').style.display = 'none';
-    };
+    b.onclick = () => { N = n; document.querySelectorAll('.count-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); pick(); renderAdminCards(); document.getElementById('outPanel').style.display = 'none'; };
     c.appendChild(b);
   }
 }
-
 function drawConst(canvas, data, accentColor) {
-  const W = canvas.width, H = canvas.height, ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, H); ctx.fillStyle = '#040810'; ctx.fillRect(0, 0, W, H);
-  const rng = mulberry32(data.name.charCodeAt(0) * 31 + data.name.length * 17);
-  for (let i = 0; i < 35; i++) { const x = rng()*W, y = rng()*H, r = rng()*0.7+0.15; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle = `rgba(180,210,230,${rng()*0.35+0.08})`; ctx.fill(); }
-  const pad = 10, pts = data.stars.map(([sx,sy]) => [pad+(sx/100)*(W-pad*2), pad+(sy/100)*(H-pad*2)]);
-  ctx.strokeStyle = accentColor + '66'; ctx.lineWidth = 0.8; ctx.setLineDash([2,4]);
-  data.lines.forEach(([a,b]) => { if(!pts[a]||!pts[b]) return; ctx.beginPath(); ctx.moveTo(pts[a][0],pts[a][1]); ctx.lineTo(pts[b][0],pts[b][1]); ctx.stroke(); });
+  const W=canvas.width,H=canvas.height,ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#040810'; ctx.fillRect(0,0,W,H);
+  const rng=mulberry32(data.name.charCodeAt(0)*31+data.name.length*17);
+  for(let i=0;i<35;i++){const x=rng()*W,y=rng()*H,r=rng()*0.7+0.15;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=`rgba(180,210,230,${rng()*0.35+0.08})`;ctx.fill();}
+  const pad=10,pts=data.stars.map(([sx,sy])=>[pad+(sx/100)*(W-pad*2),pad+(sy/100)*(H-pad*2)]);
+  ctx.strokeStyle=accentColor+'66';ctx.lineWidth=0.8;ctx.setLineDash([2,4]);
+  data.lines.forEach(([a,b])=>{if(!pts[a]||!pts[b])return;ctx.beginPath();ctx.moveTo(pts[a][0],pts[a][1]);ctx.lineTo(pts[b][0],pts[b][1]);ctx.stroke();});
   ctx.setLineDash([]);
-  pts.forEach(([x,y],i) => {
-    const r = i === 0 ? 3.2 : 1.8;
-    const grad = ctx.createRadialGradient(x,y,0,x,y,r*5); grad.addColorStop(0,accentColor+'66'); grad.addColorStop(1,'transparent');
-    ctx.beginPath(); ctx.arc(x,y,r*5,0,Math.PI*2); ctx.fillStyle = grad; ctx.fill();
-    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
-  });
+  pts.forEach(([x,y],i)=>{const r=i===0?3.2:1.8;const grad=ctx.createRadialGradient(x,y,0,x,y,r*5);grad.addColorStop(0,accentColor+'66');grad.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(x,y,r*5,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();});
 }
-
-// ── REWARD SUGGESTION LOGIC ────────────────────────────────────────────────────
 function buildSuggestionsHtml(query, inputIdx, accentColor) {
   const q = query.toLowerCase().trim();
   if (!q) {
-    // Show all grouped
     let html = '';
     REWARD_SUGGESTIONS.forEach(group => {
       html += `<div class="sug-category">${group.category}</div>`;
-      group.items.forEach(item => {
-        html += `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}')">
-          <span style="color:${accentColor}aa;font-size:9px;margin-right:6px;">✦</span>${item}
-        </div>`;
-      });
+      group.items.forEach(item => { html += `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}','giveaway')">${item}</div>`; });
     });
     return html;
   }
-  // Filter matching
   const matches = ALL_SUGGESTIONS_FLAT.filter(s => s.toLowerCase().includes(q));
   if (!matches.length) return `<div class="sug-item" style="color:rgba(255,255,255,0.25);pointer-events:none;">No matches</div>`;
-  return matches.map(item =>
-    `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}')">
-      <span style="color:${accentColor}aa;font-size:9px;margin-right:6px;">✦</span>${item}
-    </div>`
-  ).join('');
+  return matches.map(item => `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}','giveaway')">${item}</div>`).join('');
 }
-
-function selectSuggestion(idx, value) {
-  rewards[idx] = value;
-  const inp = document.getElementById('reward-' + idx);
-  if (inp) { inp.value = value; inp.classList.add('filled'); }
-  closeSuggestions(idx);
-  updateProgress();
+function buildQuizSuggestionsHtml(query, inputIdx) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    let html = '';
+    REWARD_SUGGESTIONS.forEach(group => {
+      html += `<div class="sug-category">${group.category}</div>`;
+      group.items.forEach(item => { html += `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}','quiz')">${item}</div>`; });
+    });
+    return html;
+  }
+  const matches = ALL_SUGGESTIONS_FLAT.filter(s => s.toLowerCase().includes(q));
+  if (!matches.length) return `<div class="sug-item" style="color:rgba(255,255,255,0.25);pointer-events:none;">No matches</div>`;
+  return matches.map(item => `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}','quiz')">${item}</div>`).join('');
 }
-
-function openSuggestions(idx, accentColor) {
-  const wrap = document.getElementById('sug-wrap-' + idx);
-  const dd = document.getElementById('sug-dd-' + idx);
-  if (!wrap || !dd) return;
-  const q = (document.getElementById('reward-' + idx) || {}).value || '';
-  dd.innerHTML = buildSuggestionsHtml(q, idx, accentColor);
+function selectSuggestion(idx, value, type) {
+  if (type === 'giveaway') {
+    rewards[idx] = value;
+    const inp = document.getElementById('reward-' + idx);
+    if (inp) { inp.value = value; inp.classList.add('filled'); }
+    closeSuggestions(idx, 'giveaway');
+    updateProgress();
+  } else {
+    quizPrizes[idx] = value;
+    const inp = document.getElementById('qprize-' + idx);
+    if (inp) { inp.value = value; inp.classList.add('filled'); }
+    closeSuggestions(idx, 'quiz');
+    updateQuizProgress();
+  }
+}
+function openSuggestions(idx, type, accentColor) {
+  const dd = document.getElementById((type === 'quiz' ? 'qsug-dd-' : 'sug-dd-') + idx);
+  const inp = document.getElementById((type === 'quiz' ? 'qprize-' : 'reward-') + idx);
+  if (!dd || !inp) return;
+  dd.innerHTML = type === 'quiz' ? buildQuizSuggestionsHtml(inp.value || '', idx) : buildSuggestionsHtml(inp.value || '', idx, accentColor);
   dd.classList.add('open');
 }
-
-function closeSuggestions(idx) {
-  const dd = document.getElementById('sug-dd-' + idx);
+function closeSuggestions(idx, type) {
+  const dd = document.getElementById((type === 'quiz' ? 'qsug-dd-' : 'sug-dd-') + idx);
   if (dd) dd.classList.remove('open');
 }
-
-function filterSuggestions(idx, accentColor, val) {
-  const dd = document.getElementById('sug-dd-' + idx);
+function filterSuggestions(idx, type, accentColor, val) {
+  const dd = document.getElementById((type === 'quiz' ? 'qsug-dd-' : 'sug-dd-') + idx);
   if (!dd || !dd.classList.contains('open')) return;
-  dd.innerHTML = buildSuggestionsHtml(val, idx, accentColor);
+  dd.innerHTML = type === 'quiz' ? buildQuizSuggestionsHtml(val, idx) : buildSuggestionsHtml(val, idx, accentColor);
 }
-
 function renderAdminCards() {
   const grid = document.getElementById('constGrid'); grid.innerHTML = '';
   chosen.forEach((c, i) => {
@@ -591,597 +800,741 @@ function renderAdminCards() {
           <div class="cc-name" style="color:${pal.accent};text-shadow:0 0 8px ${pal.accent}55;">${c.name}</div>
           <div class="cc-latin" style="color:${pal.accent}77;">${c.latin} · ${c.season}</div>
           <div class="cc-input-wrap" id="sug-wrap-${i}">
-            <input class="cc-input" id="reward-${i}" type="text"
-              placeholder="Enter reward or pick from suggestions…"
-              value="${rewards[i]||''}"
+            <input class="cc-input" id="reward-${i}" type="text" placeholder="Enter reward or pick from list…" value="${rewards[i]||''}"
               oninput="onRewardInput(${i},this.value,'${pal.accent}')"
-              onfocus="openSuggestions(${i},'${pal.accent}')"
-              onblur="closeSuggestions(${i})"
+              onfocus="openSuggestions(${i},'giveaway','${pal.accent}')"
+              onblur="closeSuggestions(${i},'giveaway')"
               style="border-color:${pal.accent}33;" />
             <div class="reward-suggestions" id="sug-dd-${i}"></div>
           </div>
         </div>
       </div>
       <div style="padding:5px 10px 8px;border-top:1px solid ${pal.accent}18;display:flex;gap:10px;align-items:center;">
-        <span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:${pal.accent}55;letter-spacing:1px;">AREA: ${c.area}</span>
-        <span style="font-family:'Share Tech Mono',monospace;font-size:8px;color:${pal.accent}44;letter-spacing:1px;">STARS: ${c.stars.length}</span>
-        <span style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:8px;padding:2px 6px;border:1px solid ${pal.accent}44;border-radius:2px;color:${pal.accent}88;">${pal.label}</span>
+        <span style="font-size:8px;color:${pal.accent}55;letter-spacing:1px;">AREA: ${c.area}</span>
+        <span style="font-size:8px;color:${pal.accent}44;letter-spacing:1px;">STARS: ${c.stars.length}</span>
+        <span style="margin-left:auto;font-size:8px;padding:2px 6px;border:1px solid ${pal.accent}44;border-radius:2px;color:${pal.accent}88;">${pal.label}</span>
       </div>`;
     grid.appendChild(div);
     setTimeout(() => { drawConst(document.getElementById('cc-c-'+i), c, pal.accent); updateCardState(i); }, 0);
   });
   updateProgress();
 }
-
-function onRewardInput(i, val, accent) {
-  rewards[i] = val.trim();
-  updateCardState(i);
-  updateProgress();
-  filterSuggestions(i, accent, val);
-}
+function onRewardInput(i, val, accent) { rewards[i] = val.trim(); updateCardState(i); updateProgress(); filterSuggestions(i, 'giveaway', accent, val); }
 function updateCardState(i) { const inp = document.getElementById('reward-'+i); if(!inp) return; if(rewards[i]) inp.classList.add('filled'); else inp.classList.remove('filled'); }
-function updateProgress() {
-  const filled = rewards.filter(r => r).length;
-  document.getElementById('progFill').style.width = (filled/N*100) + '%';
-  document.getElementById('progCount').textContent = filled + '/' + N;
-  document.getElementById('rewardBadge').textContent = filled + ' / ' + N + ' REWARDS SET';
-}
-function clearRewards() { rewards = Array(N).fill(''); document.querySelectorAll('.cc-input').forEach(el => { el.value = ''; el.classList.remove('filled'); }); updateProgress(); }
-function reroll() { pick(); renderAdminCards(); document.getElementById('outPanel').style.display = 'none'; }
+function updateProgress() { const filled=rewards.filter(r=>r).length; document.getElementById('progFill').style.width=(filled/N*100)+'%'; document.getElementById('progCount').textContent=filled+'/'+N; document.getElementById('rewardBadge').textContent=filled+' / '+N+' REWARDS SET'; }
+function clearRewards() { rewards=Array(N).fill(''); document.querySelectorAll('.cc-input').forEach(el=>{el.value='';el.classList.remove('filled');}); updateProgress(); }
+function reroll() { pick(); renderAdminCards(); document.getElementById('outPanel').style.display='none'; }
 
-// ── PUBLISH GAME ───────────────────────────────────────────────────────────────
 async function publishGame() {
   const missing = rewards.filter(r => !r).length;
   const warn = document.getElementById('setupWarn');
-  if (missing > 0) { warn.style.display = 'block'; setTimeout(() => warn.style.display = 'none', 3000); return; }
+  if (missing > 0) { warn.style.display = 'block'; setTimeout(()=>warn.style.display='none',3000); return; }
   warn.style.display = 'none';
-
-  const gameId = 'GAME_' + Date.now();
+  const gameId = 'GVW_' + Date.now();
   const gameData = {
-    id: gameId,
+    id: gameId, mode: 'giveaway',
     constellations: chosen.map((c, i) => ({ ...c, index: i, reward: rewards[i], palette: PALETTES[i % PALETTES.length] })),
-    n: N,
-    active: true,
-    revealed: false,
-    created_at: new Date().toISOString()
+    n: N, active: true, revealed: false, created_at: new Date().toISOString()
   };
-
   const { error } = await sb.from('constellation_games').upsert({ id: gameId, data: gameData });
-  if (error) { alert('Error publishing game: ' + error.message); return; }
-
-  localStorage.setItem(GAME_ID_KEY, gameId);
+  if (error) { alert('Error publishing: ' + error.message); return; }
   activeGameId = gameId;
   document.getElementById('activeGameId').textContent = gameId;
+  document.getElementById('activeGameType').textContent = 'GIVEAWAY';
   document.getElementById('gameStatusRow').style.display = 'flex';
   document.getElementById('adminDashPanel').style.display = 'block';
   document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-active">LIVE</span>';
-  loadAdminDashboard();
-  subscribeToClaimsAdmin();
-  alert('✓ Game published! Players can now join with any username/ID. Share the URL with them.');
+  loadAdminDashboard(); subscribeToClaimsAdmin();
+  alert('✓ Giveaway published! Share the URL with players.');
 }
 
-async function loadActiveGame() {
-  const { data, error } = await sb.from('constellation_games').select('*').eq('data->>active', 'true').order('created_at', { ascending: false }).limit(1);
-  if (error || !data || !data.length) return;
-  const game = data[0];
-  activeGameId = game.id;
-  const gd = game.data;
-  N = gd.n;
-  chosen = gd.constellations.map(c => { const full = ALL_CONSTS.find(a => a.name === c.name); return full || c; });
-  rewards = gd.constellations.map(c => c.reward);
-  renderAdminCards();
-  document.getElementById('activeGameId').textContent = activeGameId;
+// ══════════════════════════════════════════════════════
+// QUIZ SETUP
+// ══════════════════════════════════════════════════════
+function initQuizSetup() {
+  quizQCount = 10;
+  quizPrizes = Array(QUIZ_TOP_N).fill('');
+  renderQuizQCountBtns();
+  renderQuizPrizeGrid();
+}
+function renderQuizQCountBtns() {
+  const c = document.getElementById('quizQCountBtns'); if(!c) return; c.innerHTML = '';
+  [5,10,15,20,25,30].forEach(n => {
+    const b = document.createElement('button');
+    b.className = 'count-btn' + (n === quizQCount ? ' active' : '');
+    b.textContent = n;
+    b.onclick = () => {
+      quizQCount = n;
+      document.querySelectorAll('#quizQCountBtns .count-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.getElementById('quizSetupBadge').textContent = `${n} QUESTIONS · TOP 10 WIN`;
+      document.getElementById('quizSetupWarn').textContent = `⚠ SET ALL 10 PRIZES BEFORE PUBLISHING`;
+    };
+    c.appendChild(b);
+  });
+}
+function renderQuizPrizeGrid() {
+  const grid = document.getElementById('quizPrizeGrid'); grid.innerHTML = '';
+  for (let i = 0; i < QUIZ_TOP_N; i++) {
+    const pal = PALETTES[i % PALETTES.length];
+    const rankLabel = i === 0 ? '🥇 1ST' : i === 1 ? '🥈 2ND' : i === 2 ? '🥉 3RD' : `#${i+1}`;
+    const div = document.createElement('div');
+    div.style.cssText = `background:var(--bg3);border:1px solid ${pal.accent}33;border-radius:4px;padding:10px;position:relative;overflow:visible;`;
+    div.innerHTML = `
+      <div style="font-size:9px;color:${pal.accent};letter-spacing:2px;margin-bottom:6px;">${rankLabel} PLACE PRIZE</div>
+      <div class="cc-input-wrap" id="qsug-wrap-${i}" style="overflow:visible;">
+        <input class="cc-input" id="qprize-${i}" type="text" placeholder="Enter prize…" value="${quizPrizes[i]||''}"
+          oninput="onQuizPrizeInput(${i},this.value)"
+          onfocus="openSuggestions(${i},'quiz','')"
+          onblur="closeSuggestions(${i},'quiz')"
+          style="border-color:${pal.accent}33;font-size:11px;${quizPrizes[i]?'border-color:rgba(57,255,20,0.35);color:var(--green);':''}" />
+        <div class="reward-suggestions" id="qsug-dd-${i}" style="z-index:9999;"></div>
+      </div>`;
+    grid.appendChild(div);
+  }
+  updateQuizProgress();
+}
+function onQuizPrizeInput(i, val) { quizPrizes[i] = val.trim(); filterSuggestions(i, 'quiz', '', val); updateQuizProgress(); const inp=document.getElementById('qprize-'+i); if(inp){if(quizPrizes[i]){inp.classList.add('filled');}else{inp.classList.remove('filled');}} }
+function updateQuizProgress() { const filled=quizPrizes.filter(p=>p).length; document.getElementById('quizProgFill').style.width=(filled/QUIZ_TOP_N*100)+'%'; document.getElementById('quizProgCount').textContent=filled+'/'+QUIZ_TOP_N; }
+function clearQuizPrizes() { quizPrizes=Array(QUIZ_TOP_N).fill(''); renderQuizPrizeGrid(); }
+
+async function publishQuiz() {
+  const missing = quizPrizes.filter(p => !p).length;
+  const warn = document.getElementById('quizSetupWarn');
+  if (missing > 0) { warn.style.display = 'block'; setTimeout(()=>warn.style.display='none',3000); return; }
+  warn.style.display = 'none';
+
+  // Pick quizQCount random questions
+  const shuffledBank = shuffle([...QUIZ_BANK]);
+  const selected = shuffledBank.slice(0, quizQCount);
+
+  const gameId = 'QUZ_' + Date.now();
+  const gameData = {
+    id: gameId, mode: 'quiz',
+    questions: selected,
+    q_count: quizQCount,
+    prizes: quizPrizes,
+    active: true, revealed: false,
+    created_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('constellation_games').upsert({ id: gameId, data: gameData });
+  if (error) { alert('Error publishing quiz: ' + error.message); return; }
+
+  activeQuizId = gameId;
+  document.getElementById('activeGameId').textContent = gameId;
+  document.getElementById('activeGameType').textContent = 'QUIZ';
   document.getElementById('gameStatusRow').style.display = 'flex';
-  document.getElementById('adminDashPanel').style.display = 'block';
+  document.getElementById('quizDashPanel').style.display = 'block';
   document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-active">LIVE</span>';
-  loadAdminDashboard();
-  subscribeToClaimsAdmin();
+  loadQuizDashboard(); subscribeToQuizAdmin();
+  alert(`✓ Quiz published! ${quizQCount} questions selected. Share the URL with players.`);
 }
 
+// ══════════════════════════════════════════════════════
+// CLEAR GAME
+// ══════════════════════════════════════════════════════
 async function clearGame() {
-  if (!activeGameId) return;
-  if (!confirm('End this game? All claims will remain in DB but game marked inactive. Players will see their rewards revealed.')) return;
-
-  // Mark as inactive AND revealed so players see their prizes
-  const { data: gameData } = await sb.from('constellation_games').select('data').eq('id', activeGameId).single();
+  const gid = activeGameId || activeQuizId;
+  if (!gid) return;
+  if (!confirm('End this game? Players will see their results revealed.')) return;
+  const { data: gameData } = await sb.from('constellation_games').select('data').eq('id', gid).single();
   const updatedData = { ...(gameData?.data || {}), active: false, revealed: true };
-  await sb.from('constellation_games').update({ data: updatedData }).eq('id', activeGameId);
-
+  await sb.from('constellation_games').update({ data: updatedData }).eq('id', gid);
   document.getElementById('gameStatusRow').style.display = 'none';
   document.getElementById('adminDashPanel').style.display = 'none';
+  document.getElementById('quizDashPanel').style.display = 'none';
   document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-inactive">ENDED</span>';
   if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel = null; }
-  activeGameId = null;
+  if (quizChannel) { sb.removeChannel(quizChannel); quizChannel = null; }
+  activeGameId = null; activeQuizId = null;
 }
 
-// ── ADMIN DASHBOARD ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// ADMIN GIVEAWAY DASHBOARD
+// ══════════════════════════════════════════════════════
 async function loadAdminDashboard() {
   if (!activeGameId) return;
   const { data, error } = await sb.from('constellation_claims').select('*').eq('game_id', activeGameId).order('claimed_at', { ascending: true });
-  if (error) { document.getElementById('dashBody').innerHTML = `<div class="warn" style="display:block;">Error loading claims: ${error.message}</div>`; return; }
+  if (error) { document.getElementById('dashBody').innerHTML = `<div class="warn" style="display:block;">Error: ${error.message}</div>`; return; }
   claimsData = data || [];
   renderAdminDashboard();
 }
-
 function renderAdminDashboard() {
   const body = document.getElementById('dashBody');
-  const totalClaims = claimsData.length;
   const uniquePlayers = new Set(claimsData.map(c => c.game_user_id)).size;
-  document.getElementById('activePlayers').textContent = uniquePlayers;
-  document.getElementById('activeClaims').textContent = totalClaims;
-
   const byConst = {};
-  claimsData.forEach(c => {
-    if (!byConst[c.constellation_index]) byConst[c.constellation_index] = [];
-    byConst[c.constellation_index].push(c);
-  });
-
+  claimsData.forEach(c => { if(!byConst[c.constellation_index]) byConst[c.constellation_index]=[]; byConst[c.constellation_index].push(c); });
+  document.getElementById('activePlayers').textContent = uniquePlayers;
   let html = `<div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:10px 18px;text-align:center;min-width:100px;">
-      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);margin-bottom:4px;">TOTAL CLAIMS</div>
-      <div style="font-family:'Orbitron',monospace;font-size:22px;color:var(--accent);">${totalClaims}</div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:10px 18px;text-align:center;">
+      <div style="font-size:9px;color:var(--text2);margin-bottom:4px;">TOTAL CLAIMS</div>
+      <div style="font-family:'Orbitron',monospace;font-size:22px;color:var(--accent);">${claimsData.length}</div>
     </div>
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:10px 18px;text-align:center;min-width:100px;">
-      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);margin-bottom:4px;">UNIQUE PLAYERS</div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:10px 18px;text-align:center;">
+      <div style="font-size:9px;color:var(--text2);margin-bottom:4px;">UNIQUE PLAYERS</div>
       <div style="font-family:'Orbitron',monospace;font-size:22px;color:var(--accent2);">${uniquePlayers}</div>
     </div>
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:10px 18px;text-align:center;min-width:100px;">
-      <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);margin-bottom:4px;">SYSTEMS CLAIMED</div>
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:10px 18px;text-align:center;">
+      <div style="font-size:9px;color:var(--text2);margin-bottom:4px;">SYSTEMS CLAIMED</div>
       <div style="font-family:'Orbitron',monospace;font-size:22px;color:var(--accent3);">${Object.keys(byConst).length} / ${N}</div>
     </div>
-  </div>`;
-
-  html += `<table class="admin-table"><thead><tr>
-    <th>#</th><th>CONSTELLATION</th><th>REWARD</th><th>CLAIMERS (max ${MAX_PER_CONSTELLATION})</th><th>SLOTS</th>
-  </tr></thead><tbody>`;
-
+  </div>
+  <table class="admin-table"><thead><tr><th>#</th><th>CONSTELLATION</th><th>REWARD</th><th>CLAIMERS (max ${MAX_PER_CONSTELLATION})</th><th>SLOTS</th></tr></thead><tbody>`;
   chosen.forEach((c, i) => {
-    const pal = PALETTES[i % PALETTES.length];
-    const claimers = byConst[i] || [];
-    const claimerTags = claimers.length > 0
-      ? claimers.map(cl => `<span class="claim-tag" style="border-color:${pal.accent}44;color:${pal.accent};background:${pal.accent}10;">
-          ${cl.username} <span style="opacity:.5;font-size:9px;">#${cl.game_user_id}</span>
-        </span>`).join('')
-      : '<span class="empty-dash">— no claims —</span>';
-    const slotColor = claimers.length >= MAX_PER_CONSTELLATION ? 'var(--danger)' : claimers.length > 0 ? 'var(--gold)' : 'var(--text2)';
-    html += `<tr>
-      <td style="color:${pal.accent};font-family:'Orbitron',monospace;font-size:11px;">${i+1}</td>
-      <td><span style="color:${pal.accent};font-weight:700;">${c.name}</span><br><span style="color:var(--text2);font-size:9px;">${c.latin}</span></td>
-      <td style="color:var(--gold);">${rewards[i] || '—'}</td>
-      <td>${claimerTags}</td>
-      <td style="color:${slotColor};font-family:'Orbitron',monospace;font-size:12px;">${claimers.length}/${MAX_PER_CONSTELLATION}</td>
-    </tr>`;
+    const pal=PALETTES[i%PALETTES.length],claimers=byConst[i]||[];
+    const claimerTags=claimers.length>0?claimers.map(cl=>`<span class="claim-tag" style="border-color:${pal.accent}44;color:${pal.accent};background:${pal.accent}10;">${cl.username}</span>`).join(''):'<span class="empty-dash">— no claims —</span>';
+    const slotColor=claimers.length>=MAX_PER_CONSTELLATION?'var(--danger)':claimers.length>0?'var(--gold)':'var(--text2)';
+    html+=`<tr><td style="color:${pal.accent};font-family:'Orbitron',monospace;font-size:11px;">${i+1}</td><td><span style="color:${pal.accent};font-weight:700;">${c.name}</span><br><span style="color:var(--text2);font-size:9px;">${c.latin}</span></td><td style="color:var(--gold);">${rewards[i]||'—'}</td><td>${claimerTags}</td><td style="color:${slotColor};font-family:'Orbitron',monospace;">${claimers.length}/${MAX_PER_CONSTELLATION}</td></tr>`;
   });
   html += '</tbody></table>';
-
-  if (claimsData.length > 0) {
-    html += `<div style="margin-top:18px;border-top:1px solid var(--border2);padding-top:14px;">
-      <div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--text2);letter-spacing:2px;margin-bottom:10px;">▶ FULL CLAIM LOG</div>
-      <table class="admin-table"><thead><tr><th>TIME</th><th>PLAYER</th><th>GAME ID</th><th>CONSTELLATION</th></tr></thead><tbody>`;
-    [...claimsData].reverse().forEach(cl => {
-      const ci = cl.constellation_index;
-      const c = chosen[ci];
-      const pal = PALETTES[ci % PALETTES.length];
-      const t = new Date(cl.claimed_at).toLocaleTimeString();
-      html += `<tr>
-        <td style="color:var(--text2);font-size:10px;">${t}</td>
-        <td style="color:var(--accent3);">${cl.username}</td>
-        <td style="color:var(--accent2);">${cl.game_user_id}</td>
-        <td style="color:${pal.accent};">#${ci+1} ${c ? c.name : '?'}</td>
-      </tr>`;
-    });
-    html += '</tbody></table></div>';
-  }
-
   body.innerHTML = html;
 }
-
 function subscribeToClaimsAdmin() {
   if (!activeGameId) return;
-  if (realtimeChannel) { sb.removeChannel(realtimeChannel); }
-  realtimeChannel = sb.channel('claims-admin')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'constellation_claims', filter: `game_id=eq.${activeGameId}` },
-      () => loadAdminDashboard())
+  if (realtimeChannel) sb.removeChannel(realtimeChannel);
+  realtimeChannel = sb.channel('claims-admin-'+activeGameId)
+    .on('postgres_changes', { event:'*', schema:'public', table:'constellation_claims', filter:`game_id=eq.${activeGameId}` }, () => loadAdminDashboard())
     .subscribe();
 }
 
-// ── PLAYER VIEW ────────────────────────────────────────────────────────────────
-async function loadPlayerView() {
-  const { data, error } = await sb.from('constellation_games').select('*').eq('data->>active', 'true').order('created_at', { ascending: false }).limit(1);
+// ══════════════════════════════════════════════════════
+// ADMIN QUIZ DASHBOARD
+// ══════════════════════════════════════════════════════
+async function loadQuizDashboard() {
+  const gid = activeQuizId;
+  if (!gid) return;
+  const { data, error } = await sb.from('constellation_claims').select('*').eq('game_id', gid).order('score', { ascending: false });
+  if (error) { document.getElementById('quizDashBody').innerHTML = `<div class="warn" style="display:block;">Error: ${error.message}</div>`; return; }
+  renderQuizDashboard(data || []);
+}
+function renderQuizDashboard(scores) {
+  document.getElementById('activePlayers').textContent = scores.length;
+  const body = document.getElementById('quizDashBody');
+  const totalQ = quizQCount || QUIZ_Q_COUNT;
+  if (!scores.length) { body.innerHTML = '<div class="loading-msg" style="color:var(--text2);">WAITING FOR PLAYERS TO COMPLETE THE QUIZ...</div>'; return; }
 
-  if (error || !data || !data.length) {
-    // No active game — check for recently ended game to show results
-    await checkForEndedGame();
-    return;
-  }
+  scores.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
 
-  const game = data[0]; activeGameId = game.id;
-  const gd = game.data;
-  N = gd.n;
-  chosen = gd.constellations.map(cd => { const full = ALL_CONSTS.find(a => a.name === cd.name); return full || cd; });
-  rewards = gd.constellations.map(c => c.reward);
-  gameRevealed = gd.revealed === true;
+  let html = `<div style="margin-bottom:16px;font-size:10px;color:var(--text2);letter-spacing:2px;">▶ TOP ${QUIZ_TOP_N} SCORERS WIN PRIZES · ${scores.length} PLAYER(S) COMPLETED · ${totalQ} QUESTIONS</div>`;
+  html += '<div style="background:var(--bg3);border:1px solid rgba(191,95,255,0.2);border-radius:4px;overflow:hidden;">';
 
-  if (!playerRewardsSeed) {
-    playerRewardsSeed = Array.from(activeGameId).reduce((a, c) => a + c.charCodeAt(0), 0);
-  }
-
-  const { data: clData } = await sb.from('constellation_claims').select('*').eq('game_id', activeGameId);
-  claimsData = clData || [];
-
-  renderPlayerGrid();
-  drawPlayerRewardPool();
-  subscribeToClaimsPlayer();
-  document.getElementById('playerClaimBadge').textContent = 'GAME: ' + activeGameId;
-
-  const myClaim = claimsData.find(c => c.game_user_id === currentUser.gameId);
-  if (myClaim) updateClaimMsg(myClaim, chosen[myClaim.constellation_index]);
+  scores.forEach((s, i) => {
+    const pal = PALETTES[i % PALETTES.length];
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const prize = i < quizPrizes.length ? quizPrizes[i] : null;
+    const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
+    html += `<div class="leaderboard-row" style="border-color:${i < QUIZ_TOP_N ? 'rgba(191,95,255,0.15)' : 'rgba(255,255,255,0.04)'}">
+      <div class="lb-rank ${rankClass}" style="${rankClass ? '' : `color:${pal.accent};font-size:13px;`}">${i+1}</div>
+      <div>
+        <div class="lb-name">${s.username}</div>
+        <div class="lb-time">ID: ${s.game_user_id} · ${timeSec}s</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="lb-score">${s.score}/${totalQ}</div>
+        ${prize ? `<div class="reward-pill">${prize}</div>` : ''}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  body.innerHTML = html;
+}
+function subscribeToQuizAdmin() {
+  if (!activeQuizId) return;
+  if (quizChannel) sb.removeChannel(quizChannel);
+  quizChannel = sb.channel('quiz-admin-'+activeQuizId)
+    .on('postgres_changes', { event:'*', schema:'public', table:'constellation_claims', filter:`game_id=eq.${activeQuizId}` }, () => loadQuizDashboard())
+    .subscribe();
 }
 
-// Check for a recently ended game and show the player's result
-async function checkForEndedGame() {
-  // Look for games with revealed=true (ended with reveal)
-  const { data } = await sb.from('constellation_games').select('*')
-    .order('created_at', { ascending: false }).limit(5);
+// ══════════════════════════════════════════════════════
+// PLAYER VIEW LOADER
+// ══════════════════════════════════════════════════════
+async function loadPlayerView() {
+  const { data, error } = await sb.from('constellation_games').select('*').eq('data->>active', 'true').order('created_at', { ascending: false }).limit(1);
+  if (error || !data || !data.length) { await checkForEndedGame(); return; }
 
-  if (!data || !data.length) {
-    showNoGame();
+  const game = data[0];
+  const gd = game.data;
+  const mode = gd.mode || 'giveaway';
+
+  if (mode === 'quiz') {
+    activeQuizId = game.id;
+    document.getElementById('playerQuizPanel').style.display = 'block';
+    loadPlayerQuiz(gd);
+  } else {
+    activeGameId = game.id;
+    N = gd.n;
+    chosen = gd.constellations.map(cd => { const full = ALL_CONSTS.find(a => a.name === cd.name); return full || cd; });
+    rewards = gd.constellations.map(c => c.reward);
+    gameRevealed = gd.revealed === true;
+    if (!playerRewardsSeed) playerRewardsSeed = Array.from(activeGameId).reduce((a,c)=>a+c.charCodeAt(0),0);
+    const { data: clData } = await sb.from('constellation_claims').select('*').eq('game_id', activeGameId);
+    claimsData = clData || [];
+    document.getElementById('playerStarPanel').style.display = 'block';
+    renderPlayerGrid();
+    drawPlayerRewardPool();
+    subscribeToClaimsPlayer();
+    document.getElementById('playerClaimBadge').textContent = 'GAME: ' + activeGameId;
+    const myClaim = claimsData.find(c => c.game_user_id === currentUser.gameId);
+    if (myClaim) updateClaimMsg(myClaim, chosen[myClaim.constellation_index]);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PLAYER QUIZ
+// ══════════════════════════════════════════════════════
+async function loadPlayerQuiz(gd) {
+  // Check if already submitted
+  const { data: existing } = await sb.from('constellation_claims').select('*').eq('game_id', activeQuizId).eq('game_user_id', currentUser.gameId);
+  if (existing && existing.length) {
+    showQuizResults(existing[0], gd);
     return;
   }
 
-  // Find the most recent ended+revealed game where this player had a claim
+  quizQuestions = gd.questions;
+  const totalQ = gd.q_count || quizQuestions.length || QUIZ_Q_COUNT;
+  quizAnswers = Array(totalQ).fill(null);
+  quizCurrent = 0;
+  quizScore = 0;
+  quizSubmitted = false;
+
+  document.getElementById('quizStatusBadge').textContent = `ACTIVE · ${totalQ} QUESTIONS`;
+
+  // Show prize table + start button first
+  showQuizPrizeTable(gd, totalQ);
+
+  // Subscribe to game end
+  if (quizChannel) sb.removeChannel(quizChannel);
+  quizChannel = sb.channel('quiz-player-'+activeQuizId)
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'constellation_games', filter:`id=eq.${activeQuizId}` }, async (payload) => {
+      const gd2 = payload.new?.data;
+      if (gd2 && !gd2.active) {
+        const { data: mySubmit } = await sb.from('constellation_claims').select('*').eq('game_id', activeQuizId).eq('game_user_id', currentUser.gameId);
+        if (mySubmit && mySubmit.length) showQuizResults(mySubmit[0], gd2);
+      }
+    })
+    .subscribe();
+}
+
+function showQuizPrizeTable(gd, totalQ) {
+  const prizes = gd.prizes || [];
+  const body = document.getElementById('quizPlayerBody');
+
+  let prizeRows = prizes.map((prize, i) => {
+    const rankLabel = i === 0 ? '🥇 1st' : i === 1 ? '🥈 2nd' : i === 2 ? '🥉 3rd' : `#${i+1}`;
+    const pal = PALETTES[i % PALETTES.length];
+    return `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid rgba(191,95,255,0.1);">
+      <div style="font-family:'Orbitron',monospace;font-size:13px;min-width:44px;${i===0?'color:var(--gold);':i===1?'color:#c0c0c0;':i===2?'color:#cd7f32;':'color:'+pal.accent+';'}">${rankLabel}</div>
+      <div style="flex:1;font-size:12px;color:#ffe8aa;">${prize}</div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div style="margin-bottom:16px;padding:14px 16px;background:rgba(191,95,255,0.06);border:1px solid rgba(191,95,255,0.25);border-radius:4px;">
+      <div style="font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:var(--purple);margin-bottom:4px;">◈ QUIZ INFO</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7;">
+        <span style="color:var(--accent);">${totalQ} questions</span> · Multiple choice · Auto-advances after each answer · Top <span style="color:var(--purple);">${prizes.length}</span> scorers win prizes · Tiebreaker by fastest time
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:var(--purple);margin-bottom:10px;">✦ PRIZE TABLE — TOP ${prizes.length} WIN</div>
+      <div style="background:var(--bg3);border:1px solid rgba(191,95,255,0.2);border-radius:4px;overflow:hidden;">
+        ${prizeRows}
+      </div>
+    </div>
+
+    <div style="text-align:center;padding:8px 0 4px;">
+      <button class="btn btn-purple" style="font-size:13px;padding:12px 32px;letter-spacing:2px;" onclick="startQuiz()">⬡ START QUIZ</button>
+      <div style="font-size:9px;color:var(--text3);margin-top:10px;letter-spacing:1px;">Once started you cannot go back. Answer all ${totalQ} questions.</div>
+    </div>`;
+}
+
+function startQuiz() {
+  quizStartTime = Date.now();
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  const q = quizQuestions[quizCurrent];
+  const totalQ = quizQuestions.length;
+  const progress = Math.round((quizCurrent / totalQ) * 100);
+  const body = document.getElementById('quizPlayerBody');
+
+  body.innerHTML = `
+    <div class="quiz-progress">
+      <span style="font-size:9px;color:var(--purple);letter-spacing:2px;">QUESTION</span>
+      <span style="font-family:'Orbitron',monospace;font-size:16px;color:var(--purple);">${quizCurrent + 1}</span>
+      <span style="font-size:9px;color:var(--text2);">/ ${totalQ}</span>
+      <div style="flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-left:10px;">
+        <div style="height:100%;width:${progress}%;background:linear-gradient(90deg,var(--purple),var(--accent));border-radius:2px;transition:width .3s;"></div>
+      </div>
+      <span style="font-size:10px;color:var(--green);">✓ ${quizScore} pts</span>
+    </div>
+    <div class="quiz-q-card">
+      <div class="quiz-q-num">◈ QUESTION ${quizCurrent + 1} OF ${totalQ}</div>
+      <div class="quiz-q-text">${q.question}</div>
+      <div class="quiz-options" id="quizOptions">
+        ${q.options.map((opt, oi) => `<button class="quiz-opt" onclick="answerQuiz(${oi})">${opt}</button>`).join('')}
+      </div>
+      <div id="quizFeedback" style="display:none;"></div>
+    </div>`;
+}
+
+function answerQuiz(optionIdx) {
+  const q = quizQuestions[quizCurrent];
+  const selected = q.options[optionIdx];
+  const isCorrect = selected === q.answer;
+
+  quizAnswers[quizCurrent] = selected;
+  if (isCorrect) quizScore++;
+
+  const btns = document.querySelectorAll('.quiz-opt');
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    if (q.options[i] === q.answer) btn.classList.add('correct');
+    else if (i === optionIdx && !isCorrect) btn.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('quizFeedback');
+  fb.style.display = 'block';
+  fb.className = 'quiz-feedback ' + (isCorrect ? 'correct' : 'wrong');
+  fb.innerHTML = isCorrect ? `✓ CORRECT! +1 point` : `✗ INCORRECT — Correct: <strong>${q.answer}</strong>`;
+
+  setTimeout(() => {
+    quizCurrent++;
+    if (quizCurrent < quizQuestions.length) {
+      renderQuizQuestion();
+    } else {
+      finishQuiz();
+    }
+  }, 1500);
+}
+
+async function finishQuiz() {
+  quizSubmitted = true;
+  const timeTaken = Date.now() - quizStartTime;
+  const totalQ = quizQuestions.length;
+
+  document.getElementById('quizPlayerBody').innerHTML = `<div class="quiz-score-display">
+    <div style="font-size:10px;letter-spacing:3px;color:var(--purple);margin-bottom:12px;">QUIZ COMPLETE</div>
+    <div class="quiz-score-num">${quizScore}/${totalQ}</div>
+    <div class="quiz-score-label">FINAL SCORE</div>
+    <div style="font-size:10px;color:var(--text2);margin-top:10px;">Time: ${Math.round(timeTaken/1000)}s</div>
+    <div style="margin-top:16px;font-size:11px;color:var(--text2);">Submitting score...</div>
+  </div>`;
+
+  const { error } = await sb.from('constellation_claims').insert({
+    game_id: activeQuizId,
+    constellation_index: 0,
+    username: currentUser.username,
+    game_user_id: currentUser.gameId,
+    score: quizScore,
+    time_taken: timeTaken
+  });
+
+  if (error && !error.message.includes('duplicate')) {
+    document.getElementById('quizPlayerBody').innerHTML += `<div style="color:var(--danger);font-size:10px;margin-top:8px;">⚠ Error saving score: ${error.message}</div>`;
+    return;
+  }
+
+  const { data: gameRow } = await sb.from('constellation_games').select('*').eq('id', activeQuizId).single();
+  const { data: scores } = await sb.from('constellation_claims').select('*').eq('game_id', activeQuizId).order('score', { ascending: false });
+
+  document.getElementById('playerQuizResultPanel').style.display = 'block';
+  showQuizResults({ score: quizScore, time_taken: timeTaken }, gameRow?.data, scores || []);
+
+  document.getElementById('quizPlayerBody').innerHTML = `<div class="quiz-score-display">
+    <div style="font-size:10px;letter-spacing:3px;color:var(--purple);margin-bottom:12px;">QUIZ COMPLETE</div>
+    <div class="quiz-score-num">${quizScore}/${totalQ}</div>
+    <div class="quiz-score-label">YOUR FINAL SCORE</div>
+    <div style="font-size:10px;color:var(--text2);margin-top:10px;">Time: ${Math.round(timeTaken/1000)}s · Score submitted!</div>
+  </div>`;
+}
+
+async function showQuizResults(myResult, gd, allScores) {
+  if (!allScores) {
+    const { data: scores } = await sb.from('constellation_claims').select('*').eq('game_id', activeQuizId).order('score', { ascending: false });
+    allScores = scores || [];
+    if (!gd) {
+      const { data: gameRow } = await sb.from('constellation_games').select('*').eq('id', activeQuizId).single();
+      gd = gameRow?.data;
+    }
+  }
+
+  allScores.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+  const myRank = allScores.findIndex(s => s.game_user_id === currentUser.gameId) + 1;
+  const prizes = gd?.prizes || quizPrizes;
+  const totalQ = gd?.q_count || (gd?.questions?.length) || QUIZ_Q_COUNT;
+
+  document.getElementById('playerQuizPanel').style.display = 'block';
+  document.getElementById('playerQuizResultPanel').style.display = 'block';
+  document.getElementById('quizResultBadge').textContent = `RANK #${myRank || '?'} · ${myResult.score || 0}/${totalQ}`;
+
+  const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
+
+  let html = '';
+
+  // ── MY RESULT CARD ──
+  if (myPrize) {
+    html += `<div class="player-reward-win" style="margin-bottom:18px;">
+      <div class="prw-title">🏆 TOP ${prizes.length} — YOU WIN A PRIZE!</div>
+      <div class="prw-reward">${myPrize}</div>
+      <div class="prw-rank" style="margin-top:8px;">
+        <span style="color:var(--purple);font-family:'Orbitron',monospace;">RANK #${myRank}</span>
+        <span style="color:rgba(255,255,255,0.3);margin:0 8px;">·</span>
+        Score: ${myResult.score || 0}/${totalQ}
+        <span style="color:rgba(255,255,255,0.3);margin:0 8px;">·</span>
+        Time: ${myResult.time_taken ? Math.round(myResult.time_taken/1000) : '?'}s
+      </div>
+    </div>`;
+  } else {
+    html += `<div style="padding:16px;background:rgba(90,120,138,0.08);border:1px solid rgba(90,120,138,0.2);border-radius:4px;margin-bottom:18px;text-align:center;">
+      <div style="font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:6px;">YOUR RESULT</div>
+      <div style="font-family:'Orbitron',monospace;font-size:24px;color:var(--text);margin-bottom:4px;">${myRank > 0 ? `Rank #${myRank}` : '—'}</div>
+      <div style="font-size:11px;color:var(--text2);">Score: ${myResult.score||0}/${totalQ} · Time: ${myResult.time_taken ? Math.round(myResult.time_taken/1000) : '?'}s</div>
+      ${myRank > prizes.length ? `<div style="font-size:10px;color:rgba(255,51,68,0.7);margin-top:6px;">Not in top ${prizes.length} — keep practicing!</div>` : ''}
+    </div>`;
+  }
+
+  // ── PRIZE TABLE ──
+  html += `<div style="margin-bottom:18px;">
+    <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:var(--purple);margin-bottom:8px;">✦ PRIZE TABLE — TOP ${prizes.length} WIN</div>
+    <div style="background:var(--bg3);border:1px solid rgba(191,95,255,0.2);border-radius:4px;overflow:hidden;">`;
+
+  prizes.forEach((prize, i) => {
+    const rankLabel = i === 0 ? '🥇 1st' : i === 1 ? '🥈 2nd' : i === 2 ? '🥉 3rd' : `#${i+1}`;
+    const isMyRank = (i + 1) === myRank;
+    const pal = PALETTES[i % PALETTES.length];
+    html += `<div style="display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid rgba(191,95,255,0.08);${isMyRank ? 'background:rgba(191,95,255,0.10);' : ''}">
+      <div style="font-family:'Orbitron',monospace;font-size:12px;min-width:44px;${i===0?'color:var(--gold);':i===1?'color:#c0c0c0;':i===2?'color:#cd7f32;':'color:'+pal.accent+';'}">${rankLabel}</div>
+      <div style="flex:1;font-size:11px;color:#ffe8aa;">${prize}</div>
+      ${isMyRank ? '<div style="font-size:10px;color:var(--purple);letter-spacing:1px;">◀ YOU</div>' : ''}
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // ── LEADERBOARD ──
+  html += `<div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:10px;">▶ LEADERBOARD (${allScores.length} player${allScores.length !== 1 ? 's' : ''})</div>`;
+  html += '<div style="background:var(--bg3);border:1px solid rgba(191,95,255,0.2);border-radius:4px;overflow:hidden;">';
+
+  allScores.slice(0, 25).forEach((s, i) => {
+    const isMe = s.game_user_id === currentUser.gameId;
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const prize = i < prizes.length ? prizes[i] : null;
+    const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
+    html += `<div class="leaderboard-row" style="${isMe ? 'background:rgba(191,95,255,0.08);' : ''}${i < prizes.length ? '' : 'opacity:0.6;'}">
+      <div class="lb-rank ${rankClass}" style="${rankClass ? '' : 'color:var(--text2);font-size:13px;'}">${i+1}</div>
+      <div>
+        <div class="lb-name" style="${isMe ? 'color:var(--purple);' : ''}">${s.username}${isMe ? ' ◀ YOU' : ''}</div>
+        <div class="lb-time">${timeSec}s · ${s.score}/${totalQ} pts</div>
+      </div>
+      <div style="text-align:right;">
+        ${prize ? `<div class="reward-pill">${prize}</div>` : '<div style="font-size:10px;color:var(--text3);margin-top:2px;">no prize</div>'}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('playerQuizResultBody').innerHTML = html;
+
+  if (!quizSubmitted) {
+    document.getElementById('quizPlayerBody').innerHTML = `<div class="quiz-score-display">
+      <div style="font-size:10px;letter-spacing:3px;color:var(--purple);margin-bottom:12px;">ALREADY SUBMITTED</div>
+      <div class="quiz-score-num">${myResult.score||0}/${totalQ}</div>
+      <div class="quiz-score-label">YOUR SCORE</div>
+    </div>`;
+    quizSubmitted = true;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PLAYER GIVEAWAY
+// ══════════════════════════════════════════════════════
+async function checkForEndedGame() {
+  const { data } = await sb.from('constellation_games').select('*').order('created_at', { ascending: false }).limit(5);
+  if (!data || !data.length) { showNoGame(); return; }
   for (const game of data) {
     const gd = game.data;
-    if (!gd || gd.active) continue; // skip active games, already handled
-    // Check if this player has a claim in this game
-    const { data: clData } = await sb.from('constellation_claims').select('*')
-      .eq('game_id', game.id).eq('game_user_id', currentUser.gameId);
-    if (clData && clData.length > 0) {
-      // Found their claim — show the result
-      showEndedGameResult(game, clData[0]);
-      return;
+    if (!gd || gd.active) continue;
+    if (gd.mode === 'quiz') {
+      const { data: clData } = await sb.from('constellation_claims').select('*').eq('game_id', game.id).eq('game_user_id', currentUser.gameId);
+      if (clData && clData.length) { activeQuizId = game.id; document.getElementById('playerQuizPanel').style.display = 'block'; showQuizResults(clData[0], gd); return; }
+    } else {
+      const { data: clData } = await sb.from('constellation_claims').select('*').eq('game_id', game.id).eq('game_user_id', currentUser.gameId);
+      if (clData && clData.length) { showEndedGameResult(game, clData[0]); return; }
     }
   }
   showNoGame();
 }
-
 function showNoGame() {
+  document.getElementById('playerStarPanel').style.display = 'block';
   document.getElementById('playerGrid').innerHTML = '<div class="loading-msg" style="color:var(--danger);">NO ACTIVE GAME — WAIT FOR ADMIN TO LAUNCH ONE.</div>';
   document.getElementById('playerClaimBadge').textContent = 'NO GAME ACTIVE';
 }
-
 function showEndedGameResult(game, claim) {
   const gd = game.data;
-  const isRevealed = gd.revealed === true;
   const ci = claim.constellation_index;
   const constData = gd.constellations[ci];
   const pal = PALETTES[ci % PALETTES.length];
-
-  // Hide grid panel, show win panel
   document.getElementById('playerStarPanel').style.display = 'none';
   document.getElementById('playerRewardPanel').style.display = 'none';
   document.getElementById('playerWinPanel').style.display = 'block';
-  document.getElementById('playerClaimBadge').textContent = 'GAME ENDED';
-
   const winBody = document.getElementById('playerWinBody');
-
-  if (!isRevealed) {
-    winBody.innerHTML = `
-      <div class="reveal-banner">
-        <span class="rb-icon">⏳</span>
-        <div>
-          <div style="font-weight:bold;margin-bottom:2px;">GAME ENDED — REWARDS NOT YET REVEALED</div>
-          <div style="color:rgba(255,255,255,0.5);font-size:9px;">The admin has not revealed rewards yet. Check back soon.</div>
-        </div>
-      </div>
-      <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);padding:12px;border:1px solid var(--border2);border-radius:3px;">
-        You claimed: <span style="color:${pal.accent};">#${ci+1} ${constData ? constData.name : '?'}</span>
-      </div>`;
+  if (!gd.revealed) {
+    winBody.innerHTML = `<div class="reveal-banner"><span class="rb-icon">⏳</span><div><div style="font-weight:bold;margin-bottom:2px;">GAME ENDED — REWARDS NOT YET REVEALED</div><div style="color:rgba(255,255,255,0.5);font-size:9px;">Check back soon.</div></div></div>
+    <div style="font-size:10px;color:var(--text2);padding:12px;border:1px solid var(--border2);border-radius:3px;">You claimed: <span style="color:${pal.accent};">#${ci+1} ${constData?constData.name:'?'}</span></div>`;
     return;
   }
-
   const reward = constData ? constData.reward : '???';
-  const constName = constData ? constData.name : '?';
-  const constLatin = constData ? constData.latin : '';
-
-  winBody.innerHTML = `
-    <div class="reveal-banner">
-      <span class="rb-icon">🏆</span>
-      <div>
-        <div style="font-weight:bold;margin-bottom:2px;">REWARDS REVEALED — HERE'S WHAT YOU WON!</div>
-        <div style="color:rgba(57,255,20,0.6);font-size:9px;">Game: ${game.id}</div>
-      </div>
-    </div>
-    <div class="win-panel">
-      <div class="wp-title">✦ YOUR PRIZE ✦</div>
-      <div class="wp-reward">${reward}</div>
-      <div class="wp-const">
-        Claimed via <span style="color:${pal.accent};">#${ci+1} ${constName}</span>
-        <span style="color:rgba(255,255,255,0.2);"> · </span>
-        <span style="color:rgba(255,255,255,0.3);">${constLatin}</span>
-      </div>
-    </div>
-    <div style="margin-top:14px;">
-      <div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:10px;">▶ ALL RESULTS FROM THIS GAME</div>
-      <table class="admin-table"><thead><tr><th>#</th><th>CONSTELLATION</th><th>REWARD</th><th>WINNERS</th></tr></thead><tbody>
-        ${gd.constellations.map((cd, idx) => {
-          const p = PALETTES[idx % PALETTES.length];
-          return `<tr>
-            <td style="color:${p.accent};font-family:'Orbitron',monospace;font-size:11px;">${idx+1}</td>
-            <td><span style="color:${p.accent};font-weight:700;">${cd.name}</span><br><span style="color:var(--text2);font-size:9px;">${cd.latin}</span></td>
-            <td style="color:var(--gold);">${cd.reward}</td>
-            <td style="color:var(--text2);font-size:10px;">—</td>
-          </tr>`;
-        }).join('')}
-      </tbody></table>
-    </div>`;
+  winBody.innerHTML = `<div class="reveal-banner"><span class="rb-icon">🏆</span><div><div style="font-weight:bold;margin-bottom:2px;">REWARDS REVEALED — HERE'S WHAT YOU WON!</div></div></div>
+  <div class="win-panel"><div class="wp-title">✦ YOUR PRIZE ✦</div><div class="wp-reward">${reward}</div><div class="wp-const">Claimed via <span style="color:${pal.accent};">#${ci+1} ${constData?constData.name:'?'}</span></div></div>
+  <div style="margin-top:14px;">
+    <div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:10px;">▶ ALL RESULTS</div>
+    <table class="admin-table"><thead><tr><th>#</th><th>CONSTELLATION</th><th>REWARD</th></tr></thead><tbody>
+    ${gd.constellations.map((cd,idx)=>{const p=PALETTES[idx%PALETTES.length];return`<tr><td style="color:${p.accent};font-family:'Orbitron',monospace;">${idx+1}</td><td><span style="color:${p.accent};">${cd.name}</span></td><td style="color:var(--gold);">${cd.reward}</td></tr>`;}).join('')}
+    </tbody></table>
+  </div>`;
 }
-
 function updateClaimMsg(myClaim, mc) {
   const msg = document.getElementById('playerInfoMsg');
   if (!myClaim) { msg.style.display = 'none'; return; }
   msg.style.display = 'block';
-  if (gameRevealed) {
-    msg.textContent = `✓ YOU CLAIMED: #${myClaim.constellation_index+1} ${mc ? mc.name : ''} — REWARD: ${rewards[myClaim.constellation_index]}`;
-    msg.style.borderColor = 'rgba(57,255,20,0.5)';
-    msg.style.color = '#39ff14';
-  } else {
-    msg.textContent = `✓ YOU CLAIMED: #${myClaim.constellation_index+1} ${mc ? mc.name : ''} — Reward sealed until admin reveals`;
-    msg.style.borderColor = '';
-    msg.style.color = '';
-  }
+  if (gameRevealed) { msg.textContent = `✓ YOU CLAIMED: #${myClaim.constellation_index+1} ${mc?mc.name:''} — REWARD: ${rewards[myClaim.constellation_index]}`; msg.style.borderColor='rgba(57,255,20,0.5)'; msg.style.color='#39ff14'; }
+  else { msg.textContent = `✓ YOU CLAIMED: #${myClaim.constellation_index+1} ${mc?mc.name:''} — Reward sealed until admin reveals`; msg.style.borderColor=''; msg.style.color=''; }
 }
-
 function renderPlayerGrid() {
   const grid = document.getElementById('playerGrid'); grid.innerHTML = '';
-  const myClaimIdx = (() => { const c = claimsData.find(x => x.game_user_id === currentUser.gameId); return c ? c.constellation_index : -1; })();
-
+  const myClaimIdx = (() => { const c=claimsData.find(x=>x.game_user_id===currentUser.gameId); return c?c.constellation_index:-1; })();
   chosen.forEach((c, i) => {
-    const pal = PALETTES[i % PALETTES.length];
-    const claimersHere = claimsData.filter(x => x.constellation_index === i);
-    const isFull = claimersHere.length >= MAX_PER_CONSTELLATION;
-    const iMine = claimersHere.some(x => x.game_user_id === currentUser.gameId);
-    const alreadyClaimed = myClaimIdx >= 0;
-
-    const div = document.createElement('div'); div.className = 'const-card';
-    div.style.cssText = `border-color:${isFull ? 'rgba(255,51,68,0.3)' : iMine ? 'rgba(57,255,20,0.4)' : pal.accent+'33'};`;
-
-    let chipHtml = '';
-    for (let s = 0; s < MAX_PER_CONSTELLATION; s++) {
-      if (claimersHere[s]) {
-        const isMe = claimersHere[s].game_user_id === currentUser.gameId;
-        chipHtml += `<span class="claimer-chip ${isMe ? 'you' : ''}">${claimersHere[s].username}${isMe ? ' ✓' : ''}</span>`;
-      } else {
-        chipHtml += `<span class="claimer-chip" style="opacity:.3;">— OPEN —</span>`;
-      }
-    }
-
-    let claimBtnHtml = '';
-    if (iMine) {
-      claimBtnHtml = `<button class="claim-btn unclaim" onclick="unclaim(${i})">✕ UNCLAIM THIS SYSTEM</button>`;
-    } else if (isFull) {
-      claimBtnHtml = `<button class="claim-btn full-btn" disabled>✗ SYSTEM FULL</button>`;
-    } else if (alreadyClaimed) {
-      claimBtnHtml = `<button class="claim-btn" disabled style="opacity:.3;">YOU ALREADY CLAIMED A SYSTEM</button>`;
-    } else {
-      claimBtnHtml = `<button class="claim-btn" onclick="claimConstellation(${i})">✦ CLAIM THIS SYSTEM</button>`;
-    }
-
-    let rewardDisplay;
-    if (gameRevealed && claimersHere.length > 0) {
-      rewardDisplay = `<span style="color:var(--gold);">${rewards[i]}</span>`;
-    } else if (claimersHere.length > 0) {
-      rewardDisplay = `<span style="color:rgba(255,200,0,0.35);letter-spacing:1px;">████ SEALED UNTIL REVEAL ████</span>`;
-    } else {
-      rewardDisplay = `<span style="color:rgba(255,255,255,0.12);">████████</span>`;
-    }
-
-    div.innerHTML = `
-      <div class="cc-head">
-        <canvas class="cc-canvas" id="pc-c-${i}" width="86" height="86"></canvas>
-        <div class="cc-info">
-          <div class="cc-num" style="color:${pal.accent}aa;">SYS // #${String(i+1).padStart(2,'0')} · ${c.abbr}</div>
-          <div class="cc-name" style="color:${pal.accent};text-shadow:0 0 8px ${pal.accent}55;">${c.name}</div>
-          <div class="cc-latin" style="color:${pal.accent}77;">${c.latin} · ${c.season}</div>
-          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);margin-top:4px;">REWARD: ${rewardDisplay}</div>
-        </div>
-      </div>
-      <div class="cc-claim-footer">
-        <div class="slots-bar">CLAIMERS [${claimersHere.length}/${MAX_PER_CONSTELLATION}]</div>
-        <div class="cc-claimers">${chipHtml}</div>
-        ${claimBtnHtml}
-      </div>`;
+    const pal=PALETTES[i%PALETTES.length],claimersHere=claimsData.filter(x=>x.constellation_index===i);
+    const isFull=claimersHere.length>=MAX_PER_CONSTELLATION,iMine=claimersHere.some(x=>x.game_user_id===currentUser.gameId),alreadyClaimed=myClaimIdx>=0;
+    const div=document.createElement('div'); div.className='const-card';
+    div.style.cssText=`border-color:${isFull?'rgba(255,51,68,0.3)':iMine?'rgba(57,255,20,0.4)':pal.accent+'33'};`;
+    let chipHtml='';
+    for(let s=0;s<MAX_PER_CONSTELLATION;s++){if(claimersHere[s]){const isMe=claimersHere[s].game_user_id===currentUser.gameId;chipHtml+=`<span class="claimer-chip ${isMe?'you':''}">${claimersHere[s].username}${isMe?' ✓':''}</span>`;}else{chipHtml+=`<span class="claimer-chip" style="opacity:.3;">— OPEN —</span>`;}}
+    let claimBtnHtml='';
+    if(iMine){claimBtnHtml=`<button class="claim-btn unclaim" onclick="unclaim(${i})">✕ UNCLAIM THIS SYSTEM</button>`;}
+    else if(isFull){claimBtnHtml=`<button class="claim-btn full-btn" disabled>✗ SYSTEM FULL</button>`;}
+    else if(alreadyClaimed){claimBtnHtml=`<button class="claim-btn" disabled style="opacity:.3;">YOU ALREADY CLAIMED A SYSTEM</button>`;}
+    else{claimBtnHtml=`<button class="claim-btn" onclick="claimConstellation(${i})">✦ CLAIM THIS SYSTEM</button>`;}
+    let rewardDisplay=claimersHere.length>0&&gameRevealed?`<span style="color:var(--gold);">${rewards[i]}</span>`:claimersHere.length>0?`<span style="color:rgba(255,200,0,0.35);letter-spacing:1px;">████ SEALED ████</span>`:`<span style="color:rgba(255,255,255,0.12);">████████</span>`;
+    div.innerHTML=`<div class="cc-head"><canvas class="cc-canvas" id="pc-c-${i}" width="86" height="86"></canvas><div class="cc-info"><div class="cc-num" style="color:${pal.accent}aa;">SYS // #${String(i+1).padStart(2,'0')} · ${c.abbr}</div><div class="cc-name" style="color:${pal.accent};text-shadow:0 0 8px ${pal.accent}55;">${c.name}</div><div class="cc-latin" style="color:${pal.accent}77;">${c.latin} · ${c.season}</div><div style="font-size:9px;color:var(--text2);margin-top:4px;">REWARD: ${rewardDisplay}</div></div></div><div class="cc-claim-footer"><div class="slots-bar">CLAIMERS [${claimersHere.length}/${MAX_PER_CONSTELLATION}]</div><div class="cc-claimers">${chipHtml}</div>${claimBtnHtml}</div>`;
     grid.appendChild(div);
-    setTimeout(() => drawConst(document.getElementById('pc-c-'+i), c, pal.accent), 0);
+    setTimeout(()=>drawConst(document.getElementById('pc-c-'+i),c,pal.accent),0);
   });
 }
-
 async function claimConstellation(idx) {
-  if (!activeGameId) return;
-  const claimersHere = claimsData.filter(x => x.constellation_index === idx);
-  if (claimersHere.length >= MAX_PER_CONSTELLATION) { alert('This system is full!'); return; }
-  const alreadyClaimed = claimsData.find(x => x.game_user_id === currentUser.gameId);
-  if (alreadyClaimed) { alert('You already claimed a constellation!'); return; }
-
-  const { error } = await sb.from('constellation_claims').insert({
-    game_id: activeGameId,
-    constellation_index: idx,
-    username: currentUser.username,
-    game_user_id: currentUser.gameId
-  });
-  if (error) { alert('Error claiming: ' + error.message); return; }
-
-  claimsData.push({
-    game_id: activeGameId,
-    constellation_index: idx,
-    username: currentUser.username,
-    game_user_id: currentUser.gameId,
-    claimed_at: new Date().toISOString()
-  });
+  if(!activeGameId)return;
+  if(claimsData.filter(x=>x.constellation_index===idx).length>=MAX_PER_CONSTELLATION){alert('This system is full!');return;}
+  if(claimsData.find(x=>x.game_user_id===currentUser.gameId)){alert('You already claimed a constellation!');return;}
+  const {error}=await sb.from('constellation_claims').insert({game_id:activeGameId,constellation_index:idx,username:currentUser.username,game_user_id:currentUser.gameId});
+  if(error){alert('Error claiming: '+error.message);return;}
+  claimsData.push({game_id:activeGameId,constellation_index:idx,username:currentUser.username,game_user_id:currentUser.gameId,claimed_at:new Date().toISOString()});
   renderPlayerGrid();
-  const myClaim = claimsData.find(c => c.game_user_id === currentUser.gameId);
-  updateClaimMsg(myClaim, myClaim ? chosen[myClaim.constellation_index] : null);
+  const myClaim=claimsData.find(c=>c.game_user_id===currentUser.gameId);
+  updateClaimMsg(myClaim,myClaim?chosen[myClaim.constellation_index]:null);
 }
-
 async function unclaim(idx) {
-  if (!confirm('Remove your claim from this constellation?')) return;
-  const { error } = await sb.from('constellation_claims').delete()
-    .eq('game_id', activeGameId).eq('constellation_index', idx).eq('game_user_id', currentUser.gameId);
-  if (error) { alert('Error: ' + error.message); return; }
-
-  claimsData = claimsData.filter(
-    x => !(x.game_user_id === currentUser.gameId && x.constellation_index === idx)
-  );
-  renderPlayerGrid();
-  updateClaimMsg(null, null);
+  if(!confirm('Remove your claim from this constellation?'))return;
+  const {error}=await sb.from('constellation_claims').delete().eq('game_id',activeGameId).eq('constellation_index',idx).eq('game_user_id',currentUser.gameId);
+  if(error){alert('Error: '+error.message);return;}
+  claimsData=claimsData.filter(x=>!(x.game_user_id===currentUser.gameId&&x.constellation_index===idx));
+  renderPlayerGrid(); updateClaimMsg(null,null);
 }
-
 function subscribeToClaimsPlayer() {
-  if (realtimeChannel) { sb.removeChannel(realtimeChannel); }
-
-  realtimeChannel = sb.channel('claims-player')
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'constellation_claims',
-      filter: `game_id=eq.${activeGameId}`
-    }, async () => {
-      const { data } = await sb.from('constellation_claims').select('*').eq('game_id', activeGameId);
-      claimsData = data || [];
-      renderPlayerGrid();
-      const myClaim = claimsData.find(c => c.game_user_id === currentUser.gameId);
-      updateClaimMsg(myClaim, myClaim ? chosen[myClaim.constellation_index] : null);
+  if(realtimeChannel)sb.removeChannel(realtimeChannel);
+  realtimeChannel=sb.channel('claims-player-'+activeGameId)
+    .on('postgres_changes',{event:'*',schema:'public',table:'constellation_claims',filter:`game_id=eq.${activeGameId}`},async()=>{
+      const {data}=await sb.from('constellation_claims').select('*').eq('game_id',activeGameId);
+      claimsData=data||[]; renderPlayerGrid();
+      const myClaim=claimsData.find(c=>c.game_user_id===currentUser.gameId);
+      updateClaimMsg(myClaim,myClaim?chosen[myClaim.constellation_index]:null);
     })
-    .on('postgres_changes', {
-      event: 'UPDATE',
-      schema: 'public',
-      table: 'constellation_games',
-      filter: `id=eq.${activeGameId}`
-    }, async (payload) => {
-      const gd = payload.new?.data;
-      if (!gd) return;
-      gameRevealed = gd.revealed === true;
-
-      if (!gd.active) {
-        // Game ended — fetch this game's full data and show result
-        const { data: gameRow } = await sb.from('constellation_games').select('*').eq('id', activeGameId).single();
-        const myClaim = claimsData.find(c => c.game_user_id === currentUser.gameId);
-        if (myClaim && gameRow) {
-          showEndedGameResult(gameRow, myClaim);
-        } else {
-          document.getElementById('playerGrid').innerHTML =
-            '<div class="loading-msg" style="color:var(--danger);">GAME HAS ENDED. CONTACT ADMIN FOR RESULTS.</div>';
-          document.getElementById('playerClaimBadge').textContent = 'GAME ENDED';
-        }
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'constellation_games',filter:`id=eq.${activeGameId}`},async(payload)=>{
+      const gd=payload.new?.data; if(!gd)return;
+      gameRevealed=gd.revealed===true;
+      if(!gd.active){
+        const {data:gameRow}=await sb.from('constellation_games').select('*').eq('id',activeGameId).single();
+        const myClaim=claimsData.find(c=>c.game_user_id===currentUser.gameId);
+        if(myClaim&&gameRow){showEndedGameResult(gameRow,myClaim);}
+        else{document.getElementById('playerGrid').innerHTML='<div class="loading-msg" style="color:var(--danger);">GAME HAS ENDED.</div>';}
         return;
       }
       renderPlayerGrid();
-      const myClaim = claimsData.find(c => c.game_user_id === currentUser.gameId);
-      updateClaimMsg(myClaim, myClaim ? chosen[myClaim.constellation_index] : null);
+      const myClaim=claimsData.find(c=>c.game_user_id===currentUser.gameId);
+      updateClaimMsg(myClaim,myClaim?chosen[myClaim.constellation_index]:null);
     })
     .subscribe();
 }
 
-// ── PLAYER REWARD POOL ─────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// PLAYER REWARD POOL (giveaway)
+// ══════════════════════════════════════════════════════
 function drawPlayerRewardPool() {
-  const seed = playerRewardsSeed || 1;
-  const rng = mulberry32(seed);
-
-  const rewardList = rewards.map((r, i) => ({ reward: r, origIdx: i }));
-  for (let i = rewardList.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [rewardList[i], rewardList[j]] = [rewardList[j], rewardList[i]];
-  }
-
-  const palIdx = Array.from({ length: PALETTES.length }, (_, i) => i);
-  for (let i = palIdx.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [palIdx[i], palIdx[j]] = [palIdx[j], palIdx[i]];
-  }
-
-  const count = N;
-  const COLS = count <= 6 ? 2 : 3;
-  const ROWS = Math.ceil(count / COLS);
-  const IW = 220, IH = 100;
-  const RW = IW * COLS + (COLS - 1) * GAP + PAD * 2;
-  const RH = ROWS * IH + (ROWS - 1) * GAP + PAD * 2 + HEADER;
-
-  const cv = document.getElementById('cvPlayerRewards');
-  cv.width = RW; cv.height = RH;
-  const ctx = cv.getContext('2d');
-
-  drawBg(ctx, RW, RH, seed % 9999);
-  drawBigHeader(ctx, RW, '✦ REWARD POOL ✦', '// ' + count + ' PRIZES AVAILABLE — ORDER RANDOMIZED', '#bf5fff');
-
-  rewardList.forEach((item, i) => {
-    const col = i % COLS, row = Math.floor(i / COLS);
-    const x = PAD + col * (IW + GAP), y = HEADER + PAD + row * (IH + GAP);
-    const pal = PALETTES[palIdx[i % palIdx.length]];
-
-    ctx.fillStyle = 'rgba(10,8,16,0.95)'; roundRect(ctx, x, y, IW, IH, 4); ctx.fill();
-    ctx.strokeStyle = pal.accent + '44'; ctx.lineWidth = 1; roundRect(ctx, x, y, IW, IH, 4); ctx.stroke();
-    const gl = ctx.createLinearGradient(x, y, x + IW, y);
-    gl.addColorStop(0, 'transparent'); gl.addColorStop(.5, pal.accent); gl.addColorStop(1, 'transparent');
-    ctx.fillStyle = gl; ctx.fillRect(x, y, IW, 2);
-
-    ctx.fillStyle = pal.accent + '18'; ctx.strokeStyle = pal.accent + '55'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(x + 22, y + 24, 14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = pal.accent; ctx.font = 'bold 10px Orbitron,monospace'; ctx.textAlign = 'center';
-    ctx.shadowColor = pal.accent; ctx.shadowBlur = 10; ctx.fillText(String(i + 1), x + 22, y + 28); ctx.shadowBlur = 0;
-
-    ctx.fillStyle = pal.accent + '66'; ctx.font = '8px "Share Tech Mono",monospace'; ctx.textAlign = 'left';
-    ctx.fillText('⬡ ' + pal.label + ' AURA', x + 40, y + 22);
-
-    ctx.strokeStyle = pal.accent + '20'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(x + 10, y + 38); ctx.lineTo(x + IW - 10, y + 38); ctx.stroke();
-
-    ctx.fillStyle = pal.accent + '10'; ctx.strokeStyle = pal.accent + '33'; ctx.lineWidth = 1;
-    roundRect(ctx, x + 8, y + 44, IW - 16, IH - 52, 3); ctx.fill(); ctx.stroke();
-
-    ctx.fillStyle = '#ffe8aa'; ctx.font = 'bold 13px "Share Tech Mono",monospace'; ctx.textAlign = 'center';
-    wrapText(ctx, item.reward, x + IW / 2, y + IH - 22, IW - 24, 14);
+  const seed = playerRewardsSeed || 1, rng = mulberry32(seed);
+  const rewardList = rewards.map((r,i)=>({reward:r,origIdx:i}));
+  for(let i=rewardList.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[rewardList[i],rewardList[j]]=[rewardList[j],rewardList[i]];}
+  const palIdx=Array.from({length:PALETTES.length},(_,i)=>i);
+  for(let i=palIdx.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[palIdx[i],palIdx[j]]=[palIdx[j],palIdx[i]];}
+  const COLS=N<=6?2:3,ROWS=Math.ceil(N/COLS),IW=220,IH=100,GAP2=12,PAD2=24,HEADER2=68;
+  const RW=IW*COLS+(COLS-1)*GAP2+PAD2*2,RH=ROWS*IH+(ROWS-1)*GAP2+PAD2*2+HEADER2;
+  const cv=document.getElementById('cvPlayerRewards'); cv.width=RW; cv.height=RH;
+  const ctx=cv.getContext('2d');
+  drawBg(ctx,RW,RH,seed%9999);
+  drawBigHeader(ctx,RW,'✦ REWARD POOL ✦','// '+N+' PRIZES AVAILABLE — ORDER RANDOMIZED','#bf5fff');
+  rewardList.forEach((item,i)=>{
+    const col=i%COLS,row=Math.floor(i/COLS),x=PAD2+col*(IW+GAP2),y=HEADER2+PAD2+row*(IH+GAP2),pal=PALETTES[palIdx[i%palIdx.length]];
+    ctx.fillStyle='rgba(10,8,16,0.95)';roundRect(ctx,x,y,IW,IH,4);ctx.fill();
+    ctx.strokeStyle=pal.accent+'44';ctx.lineWidth=1;roundRect(ctx,x,y,IW,IH,4);ctx.stroke();
+    const gl=ctx.createLinearGradient(x,y,x+IW,y);gl.addColorStop(0,'transparent');gl.addColorStop(.5,pal.accent);gl.addColorStop(1,'transparent');
+    ctx.fillStyle=gl;ctx.fillRect(x,y,IW,2);
+    ctx.fillStyle=pal.accent+'18';ctx.strokeStyle=pal.accent+'55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x+22,y+24,14,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle=pal.accent;ctx.font='bold 10px Orbitron,monospace';ctx.textAlign='center';ctx.shadowColor=pal.accent;ctx.shadowBlur=10;ctx.fillText(String(i+1),x+22,y+28);ctx.shadowBlur=0;
+    ctx.fillStyle=pal.accent+'66';ctx.font='8px "Share Tech Mono",monospace';ctx.textAlign='left';ctx.fillText('⬡ '+pal.label+' AURA',x+40,y+22);
+    ctx.strokeStyle=pal.accent+'20';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+10,y+38);ctx.lineTo(x+IW-10,y+38);ctx.stroke();
+    ctx.fillStyle=pal.accent+'10';ctx.strokeStyle=pal.accent+'33';ctx.lineWidth=1;roundRect(ctx,x+8,y+44,IW-16,IH-52,3);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#ffe8aa';ctx.font='bold 13px "Share Tech Mono",monospace';ctx.textAlign='center';
+    wrapText(ctx,item.reward,x+IW/2,y+IH-22,IW-24,14);
   });
-
-  document.getElementById('playerRewardPanel').style.display = 'block';
+  document.getElementById('playerRewardPanel').style.display='block';
 }
 
-// ── IMAGE GENERATION ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// IMAGE GENERATION (giveaway)
+// ══════════════════════════════════════════════════════
 function generateImages() {
-  const missing = rewards.filter(r => !r).length;
-  const warn = document.getElementById('setupWarn');
-  if (missing > 0) { warn.style.display = 'block'; setTimeout(() => warn.style.display = 'none', 3000); return; }
-  warn.style.display = 'none';
-  shuffledRewards = shuffle([...rewards.map((r,i) => ({reward:r,origIdx:i}))]);
-  mysteryPaletteOrder = shuffledPaletteIndices();
-  document.getElementById('outPanel').style.display = 'block';
-  document.getElementById('imgCount').textContent = '3 IMAGES GENERATED';
-  setTimeout(() => { drawMystery(); drawReveal(); drawRewardsOnly(); document.getElementById('outPanel').scrollIntoView({behavior:'smooth',block:'start'}); }, 80);
+  const missing=rewards.filter(r=>!r).length,warn=document.getElementById('setupWarn');
+  if(missing>0){warn.style.display='block';setTimeout(()=>warn.style.display='none',3000);return;}
+  warn.style.display='none';
+  shuffledRewards=shuffle([...rewards.map((r,i)=>({reward:r,origIdx:i}))]);
+  mysteryPaletteOrder=shuffledPaletteIndices();
+  document.getElementById('outPanel').style.display='block';
+  setTimeout(()=>{drawMystery();drawReveal();drawRewardsOnly();document.getElementById('outPanel').scrollIntoView({behavior:'smooth',block:'start'});},80);
 }
-
 const PAD=24,GAP=12,HEADER=68;
-function calcLayout(count){const COLS=count<=6?2:count<=9?3:count<=10?2:3;const ROWS=Math.ceil(count/COLS);const CW=count<=6?340:320;const CH=160;const W=COLS*CW+(COLS-1)*GAP+PAD*2;const H=ROWS*CH+(ROWS-1)*GAP+PAD*2+HEADER;return{COLS,ROWS,CW,CH,W,H};}
+function calcLayout(count){const COLS=count<=6?2:count<=9?3:3;const ROWS=Math.ceil(count/COLS);const CW=count<=6?340:320;const CH=160;const W=COLS*CW+(COLS-1)*GAP+PAD*2;const H=ROWS*CH+(ROWS-1)*GAP+PAD*2+HEADER;return{COLS,ROWS,CW,CH,W,H};}
 function setupCanvas(id,W,H){const cv=document.getElementById(id);cv.width=W;cv.height=H;return cv.getContext('2d');}
 function cellPos(i,layout){const{COLS,CW,CH}=layout;const col=i%COLS,row=Math.floor(i/COLS);return{x:PAD+col*(CW+GAP),y:HEADER+PAD+row*(CH+GAP)};}
 function drawBg(ctx,W,H,seed){ctx.fillStyle='#060a0e';ctx.fillRect(0,0,W,H);ctx.strokeStyle='rgba(0,212,255,0.016)';ctx.lineWidth=1;for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}const rng=mulberry32(seed);for(let i=0;i<200;i++){const x=rng()*W,y=rng()*H,r=rng()*1.0+0.2;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=`rgba(180,210,235,${rng()*0.4+0.08})`;ctx.fill();}}
 function drawBigHeader(ctx,W,title,sub,color){const gl=ctx.createLinearGradient(0,0,W,0);gl.addColorStop(0,'transparent');gl.addColorStop(.5,color);gl.addColorStop(1,'transparent');ctx.fillStyle=gl;ctx.fillRect(0,0,W,2);ctx.textAlign='center';ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=20;ctx.font='bold 19px Orbitron,monospace';ctx.fillText(title,W/2,34);ctx.shadowBlur=0;ctx.fillStyle='#4a7090';ctx.font='10px "Share Tech Mono",monospace';ctx.fillText(sub,W/2,52);ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(PAD,HEADER-6);ctx.lineTo(W-PAD,HEADER-6);ctx.stroke();}
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
-function drawConstInCard(ctx,data,cx,cy,cw,ch,accent){const constW=ch,cPad=14;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(cx,cy,constW,ch);ctx.strokeStyle=accent+'22';ctx.lineWidth=1;ctx.strokeRect(cx,cy,constW,ch);const rng=mulberry32(data.name.charCodeAt(0)*41+data.name.length*19);for(let i=0;i<50;i++){const sx=cx+rng()*constW,sy=cy+rng()*ch,sr=rng()*0.8+0.15;ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.fillStyle=`rgba(190,215,240,${rng()*0.32+0.07})`;ctx.fill();}const pts=data.stars.map(([sx,sy])=>[cx+cPad+(sx/100)*(constW-cPad*2),cy+cPad+(sy/100)*(ch-cPad*2)]);ctx.strokeStyle=accent+'55';ctx.lineWidth=1.2;ctx.setLineDash([3,5]);data.lines.forEach(([a,b])=>{if(!pts[a]||!pts[b])return;ctx.beginPath();ctx.moveTo(pts[a][0],pts[a][1]);ctx.lineTo(pts[b][0],pts[b][1]);ctx.stroke();});ctx.setLineDash([]);const sizes=[4.2,3.0,2.6,3.3,2.2,2.8,2.4,2.1,2.7,2.9];pts.forEach(([px,py],i)=>{const r=sizes[i%sizes.length];const gHalo=ctx.createRadialGradient(px,py,0,px,py,r*6);gHalo.addColorStop(0,accent+'20');gHalo.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(px,py,r*6,0,Math.PI*2);ctx.fillStyle=gHalo;ctx.fill();const gCore=ctx.createRadialGradient(px,py,0,px,py,r*3);gCore.addColorStop(0,accent+'88');gCore.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(px,py,r*3,0,Math.PI*2);ctx.fillStyle=gCore;ctx.fill();if(r>=3.5){ctx.strokeStyle=accent+'66';ctx.lineWidth=0.7;const sp=r*2.5;ctx.beginPath();ctx.moveTo(px-sp,py);ctx.lineTo(px+sp,py);ctx.stroke();ctx.beginPath();ctx.moveTo(px,py-sp);ctx.lineTo(px,py+sp);ctx.stroke();}const cg=ctx.createRadialGradient(px,py,0,px,py,r);cg.addColorStop(0,'#fff');cg.addColorStop(0.5,'#e8f4ff');cg.addColorStop(1,accent+'cc');ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();});return constW;}
 function wrapText(ctx,text,mx,y,maxW,lh){const words=text.split(' ');let line='';const lines=[];for(const w of words){const t=line?line+' '+w:w;if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=w;}else line=t;}lines.push(line);const sy=y-(lines.length-1)*lh/2;lines.forEach((l,i)=>ctx.fillText(l,mx,sy+i*lh));}
+function drawConstInCard(ctx,data,cx,cy,cw,ch,accent){const constW=ch;ctx.fillStyle='rgba(0,0,0,0.3)';ctx.fillRect(cx,cy,constW,ch);ctx.strokeStyle=accent+'22';ctx.lineWidth=1;ctx.strokeRect(cx,cy,constW,ch);const cPad=14,rng=mulberry32(data.name.charCodeAt(0)*41+data.name.length*19);for(let i=0;i<50;i++){const sx=cx+rng()*constW,sy=cy+rng()*ch,sr=rng()*0.8+0.15;ctx.beginPath();ctx.arc(sx,sy,sr,0,Math.PI*2);ctx.fillStyle=`rgba(190,215,240,${rng()*0.32+0.07})`;ctx.fill();}const pts=data.stars.map(([sx,sy])=>[cx+cPad+(sx/100)*(constW-cPad*2),cy+cPad+(sy/100)*(ch-cPad*2)]);ctx.strokeStyle=accent+'55';ctx.lineWidth=1.2;ctx.setLineDash([3,5]);data.lines.forEach(([a,b])=>{if(!pts[a]||!pts[b])return;ctx.beginPath();ctx.moveTo(pts[a][0],pts[a][1]);ctx.lineTo(pts[b][0],pts[b][1]);ctx.stroke();});ctx.setLineDash([]);const sizes=[4.2,3.0,2.6,3.3,2.2,2.8,2.4,2.1,2.7,2.9];pts.forEach(([px,py],i)=>{const r=sizes[i%sizes.length];const gHalo=ctx.createRadialGradient(px,py,0,px,py,r*6);gHalo.addColorStop(0,accent+'20');gHalo.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(px,py,r*6,0,Math.PI*2);ctx.fillStyle=gHalo;ctx.fill();const gCore=ctx.createRadialGradient(px,py,0,px,py,r*3);gCore.addColorStop(0,accent+'88');gCore.addColorStop(1,'transparent');ctx.beginPath();ctx.arc(px,py,r*3,0,Math.PI*2);ctx.fillStyle=gCore;ctx.fill();if(r>=3.5){ctx.strokeStyle=accent+'66';ctx.lineWidth=0.7;const sp=r*2.5;ctx.beginPath();ctx.moveTo(px-sp,py);ctx.lineTo(px+sp,py);ctx.stroke();ctx.beginPath();ctx.moveTo(px,py-sp);ctx.lineTo(px,py+sp);ctx.stroke();}const cg=ctx.createRadialGradient(px,py,0,px,py,r);cg.addColorStop(0,'#fff');cg.addColorStop(0.5,'#e8f4ff');cg.addColorStop(1,accent+'cc');ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fillStyle=cg;ctx.fill();});return constW;}
 function drawInfoPanel(ctx,c,pal,i,cardX,cardY,CW,CH,constW,showReward,rewardText){const infoX=cardX+constW,infoW=CW-constW,mid=infoX+infoW/2;const accent=pal.accent;const bY=cardY+26;ctx.fillStyle=accent+'18';ctx.strokeStyle=accent+'55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(mid,bY,16,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=accent;ctx.font='bold 14px Orbitron,monospace';ctx.textAlign='center';ctx.shadowColor=accent;ctx.shadowBlur=12;ctx.fillText(String(i+1),mid,bY+5);ctx.shadowBlur=0;ctx.strokeStyle=accent+'22';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(infoX+10,cardY+50);ctx.lineTo(cardX+CW-10,cardY+50);ctx.stroke();let fs=16;ctx.font=`bold ${fs}px Orbitron,monospace`;while(ctx.measureText(c.name).width>infoW-14&&fs>8){fs--;ctx.font=`bold ${fs}px Orbitron,monospace`;}ctx.fillStyle='#e8f4ff';ctx.shadowColor=accent;ctx.shadowBlur=8;ctx.fillText(c.name,mid,cardY+68);ctx.shadowBlur=0;ctx.fillStyle=accent+'88';ctx.font='10px "Share Tech Mono",monospace';ctx.fillText(c.latin,mid,cardY+82);ctx.fillStyle=accent+'55';ctx.font='10px "Share Tech Mono",monospace';ctx.fillText(c.abbr+' · '+c.season,mid,cardY+94);ctx.strokeStyle=accent+'15';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(infoX+10,cardY+102);ctx.lineTo(cardX+CW-10,cardY+102);ctx.stroke();const boxH=38,boxY=cardY+CH-boxH-8;if(showReward){ctx.fillStyle=accent+'12';ctx.strokeStyle=accent+'44';ctx.lineWidth=1;roundRect(ctx,infoX+8,boxY,infoW-16,boxH,2);ctx.fill();ctx.stroke();ctx.fillStyle=accent+'66';ctx.font='11px "Share Tech Mono",monospace';ctx.fillText('✦ REWARD ✦',mid,boxY+11);ctx.fillStyle='#ffe8aa';ctx.font='bold 14px "Share Tech Mono",monospace';wrapText(ctx,rewardText||'???',mid,boxY+boxH-12,infoW-20,13);}else{ctx.fillStyle='rgba(0,212,255,0.04)';ctx.strokeStyle='rgba(0,212,255,0.15)';ctx.lineWidth=1;roundRect(ctx,infoX+8,boxY,infoW-16,boxH,2);ctx.fill();ctx.stroke();ctx.fillStyle='rgba(0,212,255,0.25)';ctx.font='13px "Share Tech Mono",monospace';ctx.fillText('[ REWARD ENCRYPTED ]',mid,boxY+boxH/2+3);}}
 function drawMystery(){const L=calcLayout(N);const ctx=setupCanvas('cvMystery',L.W,L.H);drawBg(ctx,L.W,L.H,42);drawBigHeader(ctx,L.W,'✦ CONSTELLATION GIVEAWAY ✦','// CLAIM A STAR SYSTEM — '+N+' SYSTEMS AVAILABLE','#00d4ff');chosen.forEach((c,i)=>{const pal=PALETTES[mysteryPaletteOrder[i%mysteryPaletteOrder.length]];const{x,y}=cellPos(i,L);ctx.fillStyle='rgba(8,14,20,0.94)';roundRect(ctx,x,y,L.CW,L.CH,4);ctx.fill();ctx.strokeStyle=pal.accent+'44';ctx.lineWidth=1;roundRect(ctx,x,y,L.CW,L.CH,4);ctx.stroke();const gl=ctx.createLinearGradient(x,y,x+L.CW,y);gl.addColorStop(0,'transparent');gl.addColorStop(.5,pal.accent);gl.addColorStop(1,'transparent');ctx.fillStyle=gl;ctx.fillRect(x,y,L.CW,2);const cw=drawConstInCard(ctx,c,x,y,L.CW,L.CH,pal.accent);drawInfoPanel(ctx,c,pal,i,x,y,L.CW,L.CH,cw,false,'');});}
 function drawReveal(){const L=calcLayout(N);const ctx=setupCanvas('cvReveal',L.W,L.H);drawBg(ctx,L.W,L.H,77);drawBigHeader(ctx,L.W,'✦ REWARD MANIFEST DECRYPTED ✦','// STELLAR DISTRIBUTION COMPLETE — ALL '+N+' SYSTEMS','#ffd700');chosen.forEach((c,i)=>{const{x,y}=cellPos(i,L),pal=PALETTES[i%PALETTES.length];ctx.fillStyle='rgba(10,12,6,0.95)';roundRect(ctx,x,y,L.CW,L.CH,4);ctx.fill();ctx.strokeStyle=pal.accent+'55';ctx.lineWidth=1;roundRect(ctx,x,y,L.CW,L.CH,4);ctx.stroke();const gl=ctx.createLinearGradient(x,y,x+L.CW,y);gl.addColorStop(0,'transparent');gl.addColorStop(.5,pal.accent);gl.addColorStop(1,'transparent');ctx.fillStyle=gl;ctx.fillRect(x,y,L.CW,2);const cw=drawConstInCard(ctx,c,x,y,L.CW,L.CH,pal.accent);drawInfoPanel(ctx,c,pal,i,x,y,L.CW,L.CH,cw,true,rewards[i]);});}
-function drawRewardsOnly(){const count=N;const rewardPalOrder=shuffledPaletteIndices();const COLS=count<=6?2:count<=9?3:count<=12?3:4;const ROWS=Math.ceil(count/COLS);const IW=220,IH=100,RW=IW*COLS+(COLS-1)*GAP+PAD*2,RH=ROWS*IH+(ROWS-1)*GAP+PAD*2+HEADER;const cv=document.getElementById('cvRewards');cv.width=RW;cv.height=RH;const ctx=cv.getContext('2d');drawBg(ctx,RW,RH,33);drawBigHeader(ctx,RW,'✦ REWARD POOL ✦','// '+count+' PRIZES AVAILABLE — ORDER RANDOMIZED','#bf5fff');shuffledRewards.forEach((item,i)=>{const col=i%COLS,row=Math.floor(i/COLS);const x=PAD+col*(IW+GAP),y=HEADER+PAD+row*(IH+GAP);const pal=PALETTES[rewardPalOrder[i%rewardPalOrder.length]];ctx.fillStyle='rgba(10,8,16,0.95)';roundRect(ctx,x,y,IW,IH,4);ctx.fill();ctx.strokeStyle=pal.accent+'44';ctx.lineWidth=1;roundRect(ctx,x,y,IW,IH,4);ctx.stroke();const gl=ctx.createLinearGradient(x,y,x+IW,y);gl.addColorStop(0,'transparent');gl.addColorStop(.5,pal.accent);gl.addColorStop(1,'transparent');ctx.fillStyle=gl;ctx.fillRect(x,y,IW,2);ctx.fillStyle=pal.accent+'18';ctx.strokeStyle=pal.accent+'55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x+22,y+24,14,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=pal.accent;ctx.font='bold 10px Orbitron,monospace';ctx.textAlign='center';ctx.shadowColor=pal.accent;ctx.shadowBlur=10;ctx.fillText(String(i+1),x+22,y+28);ctx.shadowBlur=0;ctx.fillStyle=pal.accent+'66';ctx.font='8px "Share Tech Mono",monospace';ctx.textAlign='left';ctx.fillText('⬡ '+pal.label+' AURA',x+40,y+22);ctx.strokeStyle=pal.accent+'20';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+10,y+38);ctx.lineTo(x+IW-10,y+38);ctx.stroke();ctx.fillStyle=pal.accent+'10';ctx.strokeStyle=pal.accent+'33';ctx.lineWidth=1;roundRect(ctx,x+8,y+44,IW-16,IH-52,3);ctx.fill();ctx.stroke();ctx.fillStyle='#ffe8aa';ctx.font='bold 13px "Share Tech Mono",monospace';ctx.textAlign='center';wrapText(ctx,item.reward,x+IW/2,y+IH-22,IW-24,14);});}
+function drawRewardsOnly(){const count=N;const rewardPalOrder=shuffledPaletteIndices();const COLS=count<=6?2:3;const ROWS=Math.ceil(count/COLS);const IW=220,IH=100,RW=IW*COLS+(COLS-1)*GAP+PAD*2,RH=ROWS*IH+(ROWS-1)*GAP+PAD*2+HEADER;const cv=document.getElementById('cvRewards');cv.width=RW;cv.height=RH;const ctx=cv.getContext('2d');drawBg(ctx,RW,RH,33);drawBigHeader(ctx,RW,'✦ REWARD POOL ✦','// '+count+' PRIZES AVAILABLE — ORDER RANDOMIZED','#bf5fff');shuffledRewards.forEach((item,i)=>{const col=i%COLS,row=Math.floor(i/COLS);const x=PAD+col*(IW+GAP),y=HEADER+PAD+row*(IH+GAP);const pal=PALETTES[rewardPalOrder[i%rewardPalOrder.length]];ctx.fillStyle='rgba(10,8,16,0.95)';roundRect(ctx,x,y,IW,IH,4);ctx.fill();ctx.strokeStyle=pal.accent+'44';ctx.lineWidth=1;roundRect(ctx,x,y,IW,IH,4);ctx.stroke();const gl=ctx.createLinearGradient(x,y,x+IW,y);gl.addColorStop(0,'transparent');gl.addColorStop(.5,pal.accent);gl.addColorStop(1,'transparent');ctx.fillStyle=gl;ctx.fillRect(x,y,IW,2);ctx.fillStyle=pal.accent+'18';ctx.strokeStyle=pal.accent+'55';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x+22,y+24,14,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle=pal.accent;ctx.font='bold 10px Orbitron,monospace';ctx.textAlign='center';ctx.shadowColor=pal.accent;ctx.shadowBlur=10;ctx.fillText(String(i+1),x+22,y+28);ctx.shadowBlur=0;ctx.fillStyle=pal.accent+'66';ctx.font='8px "Share Tech Mono",monospace';ctx.textAlign='left';ctx.fillText('⬡ '+pal.label+' AURA',x+40,y+22);ctx.strokeStyle=pal.accent+'20';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+10,y+38);ctx.lineTo(x+IW-10,y+38);ctx.stroke();ctx.fillStyle=pal.accent+'10';ctx.strokeStyle=pal.accent+'33';ctx.lineWidth=1;roundRect(ctx,x+8,y+44,IW-16,IH-52,3);ctx.fill();ctx.stroke();ctx.fillStyle='#ffe8aa';ctx.font='bold 13px "Share Tech Mono",monospace';ctx.textAlign='center';wrapText(ctx,item.reward,x+IW/2,y+IH-22,IW-24,14);});}
 
+// ══════════════════════════════════════════════════════
+// MISC
+// ══════════════════════════════════════════════════════
 function switchTab(tab,evt){document.querySelectorAll('.out-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));if(evt&&evt.target)evt.target.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');}
 function dlCanvas(id,name){const cv=document.getElementById(id);const a=document.createElement('a');a.download=name+'.png';a.href=cv.toDataURL('image/png');a.click();}
 async function copyCanvas(id,btnId){const cv=document.getElementById(id);cv.toBlob(async blob=>{try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);const b=document.getElementById(btnId),orig=b.textContent;b.textContent='✓ COPIED';setTimeout(()=>b.textContent=orig,1800);}catch(e){alert('Copy failed — use Download instead.');}});}
 function initHeaderStars(){const cv=document.getElementById('headerStars');const W=cv.offsetWidth,H=cv.offsetHeight;cv.width=W;cv.height=H;const ctx=cv.getContext('2d');const rng=mulberry32(999);for(let i=0;i<90;i++){ctx.beginPath();ctx.arc(rng()*W,rng()*H,rng()*1.1+0.2,0,Math.PI*2);ctx.fillStyle=`rgba(180,220,240,${rng()*0.45+0.1})`;ctx.fill();}}
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  initHeaderStars();
-  initSupabase();
-});
+document.addEventListener('DOMContentLoaded', () => { initHeaderStars(); initSupabase(); });
 </script>
 </body>
 </html>

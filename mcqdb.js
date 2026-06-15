@@ -94,7 +94,6 @@ const QUIZ_BANK = [
   {question:"What is the name of Rafia's signature skill?",options:["Directional Expertise","Consecutive Strike","Stability Control","Adrenaline Surge"],answer:"Stability Control"},
   {question:"What is the name of Javal's signature skill?",options:["Directional Expertise","Consecutive Strike","Stability Control","Adrenaline Surge"],answer:"Adrenaline Surge"},
   {question:"What is the name of Murphy Lawson's signature skill?",options:["Rock 'N Roll","Adrenaline Surge","Double Whammy","Eradicate"],answer:"Rock 'N Roll"},
-
   // ── COMBO SKILL NAMES ─────────────────────────────
   {question:"What is the skill name for the combo commander 'Rays of Destiny'?",options:["Judgement","Insidious Infliction","Decaying Wane","Crucifer Sweep"],answer:"Judgement"},
   {question:"What is the skill name for the combo commander 'Impending Doom'?",options:["Judgement","Insidious Infliction","Decaying Wane","Crucifer Sweep"],answer:"Insidious Infliction"},
@@ -112,7 +111,6 @@ const QUIZ_BANK = [
   {question:"What is the skill name for 'Feral Raptors' (Wayne + Penni)?",options:["Battle Preparations","Suicide Strike","Fountain of Youth","Double Whammy"],answer:"Suicide Strike"},
   {question:"What is the skill name for 'Iron Maidens' (Dilira + Rafia)?",options:["Battle Preparations","Suicide Strike","Fountain of Youth","Double Whammy"],answer:"Fountain of Youth"},
   {question:"What is the skill name for 'Fairy & Fiend'?",options:["Battle Preparations","Suicide Strike","Fountain of Youth","Double Whammy"],answer:"Double Whammy"},
-
   // ── ABILITY MECHANICS ────────────────────────────
   {question:"What is the steps range limit for Leo's defensive reduction area of effect?",options:["1 step","2 steps","3 steps","4 steps"],answer:"2 steps"},
   {question:"By how many steps can Sofia move when her Maneuvering triggers?",options:["1 space","2 spaces","3 spaces","4 spaces"],answer:"3 spaces"},
@@ -143,7 +141,6 @@ const QUIZ_BANK = [
   {question:"What extreme attack power boost does Murphy Lawson's 'Rock N Roll' apply?",options:["200%","300%","500%","800%"],answer:"800%"},
   {question:"When does enemy fleet defense recover after Murphy Lawson zeros it?",options:["At the end of the round","After 2 turns","Never","Instantly upon next hit"],answer:"At the end of the round"},
   {question:"What unique bypass mechanic defines Javal's 'Adrenaline Surge'?",options:["Bypass the enemy commander's ability effects","Ignore ship armor ratings","Avoid terrain step tracking","Bypass weapon alignment requirements"],answer:"Bypass the enemy commander's ability effects"},
-
   // ── COMBO SKILL MECHANICS ─────────────────────────
   {question:"What does the fusion skill 'Judgement' combine?",options:["30% Scattering damage and absorbed damage reflection","Bypassing all layout frameworks","Halving enemy module integrity","Setting map boundaries to zero"],answer:"30% Scattering damage and absorbed damage reflection"},
   {question:"What dual utilities does 'Insidious Infliction' provide?",options:["Chance to avoid damage + inflicts a 10% stackable damage curse","Triple attack loops + recoil penalty","Speed adjustments + fuel optimization","Complete range expansions"],answer:"Chance to avoid damage + inflicts a 10% stackable damage curse"},
@@ -164,7 +161,6 @@ const QUIZ_BANK = [
   {question:"What systems does 'Battering Barrage' bypass?",options:["Target's Shield, Modules, and Stability","Baseline velocity matrices","Fuel optimization mechanics","Dodge values"],answer:"Target's Shield, Modules, and Stability"},
   {question:"Under what condition does 'Divine Barrier' neutralize scattering penalties?",options:["Dodge rating is higher than the enemy commander's Accuracy rating","Aim index values double opponent totals","Priority tracking stats reach 100","Fuel cells parameter totals are stable"],answer:"Dodge rating is higher than the enemy commander's Accuracy rating"},
   {question:"What extreme amplification defines 'Suicide Strike's' offense risk?",options:["2x damage","3x damage","5x damage","6x damage"],answer:"6x damage"},
-
   // ── LORE & BIOGRAPHY ─────────────────────────────
   {question:"What rumor surrounds Angla's childhood?",options:["Born on a pirate station","Her DNA was modified and strengthened when she was young","Master mathematician at an early age","Raised by space wolves"],answer:"Her DNA was modified and strengthened when she was young"},
   {question:"What physical adversity does Leo cope with?",options:["An unknown disease requiring strong painkillers","A cybernetic replacement matrix flaw","Blindness from space radiation","Memory loss after a pirate attack"],answer:"An unknown disease requiring strong painkillers"},
@@ -200,5 +196,4 @@ const QUIZ_BANK = [
   {question:"What academic position did Rafia hold prior to the great space war?",options:["Engineering researcher at the supreme science academy","Trajectory professor at the weapon college","Adviser to the command college board","Chief medical officer"],answer:"Engineering researcher at the supreme science academy"},
   {question:"What descriptive nickname belongs to Murphy Lawson?",options:["Black Hole","Witchdoctor","Twin Torpedo","Brilliant Strategist"],answer:"Black Hole"},
   {question:"What historic event forged Javal's galaxy reputation?",options:["Repelling a pirate fleet that threatened his homeworld","Graduating top of the supreme weapon college","Escaping a wolf pack den unscathed","Defeating Red Beard's armada on a school dare"],answer:"Repelling a pirate fleet that threatened his homeworld"},
-
 ];

@@ -22,6 +22,7 @@
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" style="display:none;">
   <div class="login-wrap">
+	  <!--
     <div class="login-panel">
       <div class="login-tabs">
         <button class="login-tab active" onclick="switchLoginTab('player',event)">◉ PLAYER LOGIN</button>
@@ -37,6 +38,36 @@
         <div class="field"><label>ADMIN PASSWORD</label><input id="adminPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')loginAdmin()" /></div>
         <div id="adminErr" class="login-err">⚠ Incorrect password.</div>
         <div class="btn-row"><button class="btn btn-gold" onclick="loginAdmin()">⬡ ACCESS ADMIN PANEL</button></div>
+      </div>
+    </div>
+-->
+	  	    <div style="
+      max-width:700px;
+      margin:auto;
+      padding:40px;
+      background:#0c1219;
+      border:1px solid rgba(255,149,0,.3);
+      border-radius:8px;
+      text-align:center;
+      box-shadow:0 0 25px rgba(255,149,0,.15);
+    ">
+      <div style="
+        font-family:Orbitron,sans-serif;
+        font-size:28px;
+        color:#ff9500;
+        margin-bottom:20px;
+        letter-spacing:3px;
+      ">
+        ⚠ UNDER MAINTENANCE
+      </div>
+
+      <div style="
+        color:#d8e6f5;
+        font-size:14px;
+        line-height:1.8;
+      ">
+        Constellation Hub is currently undergoing maintenance.<br>
+        Please check back later.
       </div>
     </div>
   </div>
@@ -425,6 +456,7 @@
 
 <script src="mcqdb.js"></script>
 <script>
+	
 // ══════════════════════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════════════════════

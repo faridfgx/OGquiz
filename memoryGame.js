@@ -225,7 +225,7 @@ function renderMemoryBoard() {
 
     <div style="font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:12px;padding:0 2px;">
       ▶ Flip two cards — matching commanders stay revealed. Find all ${MEMORY_PAIR_COUNT} pairs to win!
-      ${memWild ? `<span style="color:rgba(255,215,0,0.5);margin-left:8px;">★ One wild card has no pair — flip it to reveal a bonus commander!</span>` : ''}
+      ${memWild ? `<span style="color:rgba(255,215,0,0.8);margin-left:8px;">⚠ One ODD card has no pair — flipping it resets ALL your progress!</span>` : ''}
     </div>
 
     <div id="memGrid" style="
@@ -320,6 +320,162 @@ function buildMemGrid() {
   });
 }
 
+// ════════════════════════════════════════════════════════
+// SOUNDS (Web Audio API — no external files needed)
+// ════════════════════════════════════════════════════════
+let memAudioCtx = null;
+function getAudioCtx() {
+  if (!memAudioCtx) memAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return memAudioCtx;
+}
+function playMemSound(type) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'flip') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.18);
+
+    } else if (type === 'match') {
+      // Two-note chime
+      [0, 0.12].forEach((delay, i) => {
+        const o2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.type = 'triangle';
+        o2.frequency.setValueAtTime(i === 0 ? 660 : 880, ctx.currentTime + delay);
+        g2.gain.setValueAtTime(0.22, ctx.currentTime + delay);
+        g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+        o2.start(ctx.currentTime + delay);
+        o2.stop(ctx.currentTime + delay + 0.3);
+      });
+
+    } else if (type === 'win') {
+      // Victory fanfare — ascending arpeggio
+      [0, 0.12, 0.24, 0.38].forEach((delay, i) => {
+        const freqs = [523, 659, 784, 1047];
+        const o2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        o2.connect(g2); g2.connect(ctx.destination);
+        o2.type = 'triangle';
+        o2.frequency.setValueAtTime(freqs[i], ctx.currentTime + delay);
+        g2.gain.setValueAtTime(0.25, ctx.currentTime + delay);
+        g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.4);
+        o2.start(ctx.currentTime + delay);
+        o2.stop(ctx.currentTime + delay + 0.4);
+      });
+
+    } else if (type === 'wild') {
+      // Descending "oops" tone
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(140, ctx.currentTime + 0.5);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+
+    } else if (type === 'nomatch') {
+      // Low double-blip
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(200, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    }
+  } catch(e) { /* audio not supported — silent fallback */ }
+}
+
+function triggerWildReset(wildIdx) {
+  // Lock immediately so nothing else can be clicked
+  memLocked = true;
+  memMoves++;
+  document.getElementById('memMovesCount').textContent = memMoves;
+
+  glowCard(wildIdx, '#ffd700');
+  playMemSound('wild');
+  showMemMsg(`★ ODD CARD! Commander #${memDeck[wildIdx]} has no pair — all cards reset! Progress lost!`, 'wild');
+
+  // Visual effect: red flash + shake on the whole grid
+  const grid = document.getElementById('memGrid');
+  if (grid) {
+    // Inject keyframes once
+    if (!document.getElementById('memWildStyles')) {
+      const style = document.createElement('style');
+      style.id = 'memWildStyles';
+      style.textContent = `
+        @keyframes memShake {
+          0%,100%{ transform:translateX(0) }
+          15%     { transform:translateX(-10px) }
+          30%     { transform:translateX(10px) }
+          45%     { transform:translateX(-8px) }
+          60%     { transform:translateX(8px) }
+          75%     { transform:translateX(-4px) }
+          90%     { transform:translateX(4px) }
+        }
+        @keyframes memRedFlash {
+          0%,100%{ background:transparent }
+          20%,60%{ background:rgba(255,30,30,0.18) }
+          40%,80%{ background:rgba(255,30,30,0.08) }
+        }
+        .mem-wild-shake {
+          animation: memShake 0.55s ease, memRedFlash 0.55s ease;
+          border-radius:6px;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    grid.classList.add('mem-wild-shake');
+    setTimeout(() => grid.classList.remove('mem-wild-shake'), 600);
+  }
+
+  // Also flash the odd card itself gold then red
+  const wildCard = document.getElementById(`mcard-${wildIdx}`);
+  if (wildCard) {
+    wildCard.style.transition = 'filter 0.2s';
+    wildCard.style.filter = 'drop-shadow(0 0 18px #ffd700) brightness(1.4)';
+    setTimeout(() => {
+      wildCard.style.filter = 'drop-shadow(0 0 18px rgba(255,40,40,0.9)) brightness(1.1)';
+    }, 300);
+    setTimeout(() => {
+      wildCard.style.filter = '';
+      wildCard.style.transition = '';
+    }, 700);
+  }
+
+  setTimeout(() => {
+    // Clear matched set FIRST so hideCard doesn't skip them
+    memMatched.clear();
+    memPairs = 0;
+    memFlipped = [];
+    // Now flip every card back face-down
+    for (let i = 0; i < memDeck.length; i++) {
+      hideCard(i);
+    }
+    memLocked = false;
+    document.getElementById('memPairsCount').textContent = `0/${MEMORY_PAIR_COUNT}`;
+    // Remove all glows
+    for (let i = 0; i < memDeck.length; i++) {
+      const card = document.getElementById(`mcard-${i}`);
+      if (card) {
+        const fronts = card.querySelectorAll('div');
+        fronts.forEach(f => { if (f.style.transform === 'rotateY(180deg)') f.style.borderColor = 'rgba(0,255,204,0.5)'; });
+      }
+    }
+    showMemMsg(`★ PROGRESS RESET — Find pairs again, avoid the odd card!`, 'wild');
+  }, 2200);
+}
+
 function flipCard(idx) {
   if (memLocked) return;
   if (memMatched.has(idx)) return;
@@ -328,12 +484,21 @@ function flipCard(idx) {
   // Start timer on first flip
   if (!memStartTime) startMemTimer();
 
+  playMemSound('flip');
   revealCard(idx);
+
+  // ── Check for odd card immediately on first flip ──
+  if (isWildCard(idx)) {
+    memFlipped = [idx];
+    triggerWildReset(idx);
+    return;
+  }
+
   memFlipped.push(idx);
 
-  if (memFlipped.length === 1) return; // wait for second
+  if (memFlipped.length === 1) return; // wait for second card
 
-  // Two cards flipped
+  // Two normal cards flipped
   memLocked = true;
   memMoves++;
   document.getElementById('memMovesCount').textContent = memMoves;
@@ -347,33 +512,31 @@ function flipCard(idx) {
     memMatched.add(b);
     memPairs++;
     memFlipped = [];
-    memLocked = false;
 
     glowCard(a, '#00ffcc');
     glowCard(b, '#00ffcc');
 
     document.getElementById('memPairsCount').textContent = `${memPairs}/${MEMORY_PAIR_COUNT}`;
-    showMemMsg(`✓ MATCH FOUND! — COMMANDER #${idA}`, 'success');
 
     if (memPairs === MEMORY_PAIR_COUNT) {
-      finishMemory();
-    }
-  } else {
-    // ✗ NO MATCH — handle wild
-    const aIsWild = isWildCard(a), bIsWild = isWildCard(b);
-
-    if (aIsWild || bIsWild) {
-      // Wild card: briefly show then hide, but mark wild as "seen"
-      const wildIdx = aIsWild ? a : b;
-      glowCard(wildIdx, '#ffd700');
-      showMemMsg(`★ WILD CARD! Commander #${memDeck[wildIdx]} — No match possible`, 'wild');
+      // Final pair — show it, then celebrate
+      playMemSound('win');
+      showMemMsg(`🏆 FINAL PAIR! COMMANDER #${idA} — YOU CLEARED THE BOARD!`, 'success');
       setTimeout(() => {
-        hideCard(a);
-        hideCard(b);
-        memFlipped = [];
-        memLocked = false;
-      }, 1800);
+        showMemWinBanner(() => finishMemory());
+      }, 900);
     } else {
+      playMemSound('match');
+      showMemMsg(`✓ MATCH FOUND! — COMMANDER #${idA}`, 'success');
+      memLocked = false;
+    }
+
+  } else {
+    // ✗ NO MATCH (second card was the odd card — still possible)
+    if (isWildCard(b)) {
+      triggerWildReset(b);
+    } else {
+      playMemSound('nomatch');
       showMemMsg(`✗ NO MATCH — try again`, 'fail');
       setTimeout(() => {
         hideCard(a);
@@ -383,6 +546,60 @@ function flipCard(idx) {
       }, 1200);
     }
   }
+}
+
+// ── Win banner shown before jumping to score screen ──
+function showMemWinBanner(onDone) {
+  const body = document.getElementById('memoryPlayerBody');
+  // Overlay a celebration panel ON TOP of the board
+  const overlay = document.createElement('div');
+  overlay.id = 'memWinOverlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(4,8,16,0.82);
+    z-index:9999;
+    animation:memFadeIn 0.35s ease;
+  `;
+  overlay.innerHTML = `
+    <style>
+      @keyframes memFadeIn { from{opacity:0;transform:scale(0.88)} to{opacity:1;transform:scale(1)} }
+      @keyframes memPulse  { 0%,100%{text-shadow:0 0 30px rgba(0,255,204,0.6)} 50%{text-shadow:0 0 60px rgba(0,255,204,1)} }
+    </style>
+    <div style="
+      background:linear-gradient(135deg,rgba(0,255,204,0.08),rgba(0,212,255,0.04));
+      border:2px solid rgba(0,255,204,0.5);
+      border-radius:8px;
+      padding:40px 48px;
+      text-align:center;
+      max-width:340px;
+      width:90%;
+    ">
+      <div style="font-size:48px;margin-bottom:12px;">🏆</div>
+      <div style="font-family:'Orbitron',monospace;font-size:13px;letter-spacing:4px;color:#00ffcc;margin-bottom:8px;animation:memPulse 1.2s infinite;">
+        YOU WIN!
+      </div>
+      <div style="font-family:'Orbitron',monospace;font-size:36px;color:#00ffcc;text-shadow:0 0 30px rgba(0,255,204,0.6);margin-bottom:4px;">
+        ${memPairs}/${MEMORY_PAIR_COUNT}
+      </div>
+      <div style="font-size:11px;color:var(--text2);letter-spacing:2px;margin-bottom:20px;">
+        ALL PAIRS FOUND
+      </div>
+      <div style="font-size:12px;color:rgba(0,255,204,0.6);margin-bottom:6px;">
+        ⏱ ${Math.round((Date.now() - memStartTime)/1000)}s &nbsp;·&nbsp; ${memMoves} moves
+      </div>
+      <div style="margin-top:22px;font-size:10px;color:var(--text2);letter-spacing:1px;">
+        Saving your score…
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // After player has had a moment to read it, proceed to results
+  setTimeout(() => {
+    overlay.remove();
+    onDone();
+  }, 2800);
 }
 
 function isWildCard(idx) {

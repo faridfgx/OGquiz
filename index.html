@@ -22,7 +22,7 @@
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" style="display:none;">
   <div class="login-wrap">
-	  <!--
+  
     <div class="login-panel">
       <div class="login-tabs">
         <button class="login-tab active" onclick="switchLoginTab('player',event)">◉ PLAYER LOGIN</button>
@@ -40,36 +40,9 @@
         <div class="btn-row"><button class="btn btn-gold" onclick="loginAdmin()">⬡ ACCESS ADMIN PANEL</button></div>
       </div>
     </div>
--->
-	  	    <div style="
-      max-width:700px;
-      margin:auto;
-      padding:40px;
-      background:#0c1219;
-      border:1px solid rgba(255,149,0,.3);
-      border-radius:8px;
-      text-align:center;
-      box-shadow:0 0 25px rgba(255,149,0,.15);
-    ">
-      <div style="
-        font-family:Orbitron,sans-serif;
-        font-size:28px;
-        color:#ff9500;
-        margin-bottom:20px;
-        letter-spacing:3px;
-      ">
-        ⚠ UNDER MAINTENANCE
-      </div>
+	
 
-      <div style="
-        color:#d8e6f5;
-        font-size:14px;
-        line-height:1.8;
-      ">
-        Constellation Hub is currently undergoing maintenance.<br>
-        Please check back later.
-      </div>
-    </div>
+	
   </div>
 </div>
 
@@ -112,6 +85,11 @@
   <div class="mode-icon">🧩</div>
   <div class="mode-title">MEMORY MATCH</div>
   <div class="mode-desc">5×5 grid of commander images. Flip and match pairs. Race to clear the board fastest.</div>
+</div>
+<div class="mode-card" id="modeCardGuess" onclick="selectMode('guess')">
+  <div class="mode-icon">🎖️</div>
+  <div class="mode-title">COMMANDER GUESS</div>
+  <div class="mode-desc">See commander images, type their name and ability. Max score wins. Tiebreaker: fastest time.</div>
 </div>
         </div>
         <div id="modeSelectedLabel" style="display:none;font-size:10px;color:var(--text2);letter-spacing:2px;margin-bottom:14px;"></div>
@@ -310,6 +288,73 @@
     <div class="panel-body" id="memoryDashBody"><div class="loading-msg">WAITING FOR PLAYERS...</div></div>
   </div>
 </div>
+<!-- ──── GUESS SETUP ──── -->
+<div id="guessSetup" style="display:none;">
+  <div class="panel">
+    <div class="panel-hd">
+      <div class="ph-dot" style="background:#ffa500;box-shadow:0 0 14px rgba(255,165,0,0.4);"></div>
+      <div class="ph-title">Commander Guess Setup</div>
+      <div class="ph-badge" style="border-color:rgba(255,165,0,0.4);color:#ffa500;">COMMANDERS · TOP 5 WIN</div>
+    </div>
+    <div class="panel-body">
+
+      <div style="font-size:10px;color:var(--text2);line-height:1.8;padding:12px;background:rgba(255,165,0,0.04);border:1px solid rgba(255,165,0,0.15);border-radius:3px;margin-bottom:16px;">
+        ▶ Players see commander images one by one and pick the name + ability from 3 choices each.<br>
+        ▶ 1 point per correct name · 1 point per correct ability.<br>
+        ▶ Top 5 scorers win prizes. Tiebreaker: fastest time.
+      </div>
+
+      <!-- Count selector -->
+      <div class="count-row" style="margin-bottom:16px;">
+        <span class="count-label">COMMANDERS :</span>
+        <div class="count-btns">
+          <button class="count-btn guess-count-btn active" data-n="10"  onclick="setGuessCount(10,this)">10</button>
+          <button class="count-btn guess-count-btn"        data-n="15"  onclick="setGuessCount(15,this)">15</button>
+          <button class="count-btn guess-count-btn"        data-n="20"  onclick="setGuessCount(20,this)">20</button>
+          <button class="count-btn guess-count-btn"        data-n="25"  onclick="setGuessCount(25,this)">25</button>
+          <button class="count-btn guess-count-btn"        data-n="30"  onclick="setGuessCount(30,this)">30</button>
+        </div>
+      </div>
+
+      <!-- Prizes -->
+      <div style="font-size:9px;letter-spacing:2px;color:#ffa500;margin-bottom:10px;">✦ TOP 10 PRIZES</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px;" id="guessPrizeGrid"></div>
+
+      <!-- Consolation -->
+      <div class="consolation-box" style="margin-bottom:16px;">
+        <div class="consolation-label" style="color:rgba(255,165,0,0.6);">⬡ CONSOLATION PRIZE — EVERYONE OUTSIDE TOP 10</div>
+        <div class="cc-input-wrap" id="qsug-wrap-guessconsolation" style="overflow:visible;">
+          <input class="cc-input" id="guess-consolation-prize" type="text" placeholder="Enter consolation prize (optional)…"
+            oninput="guessConsolation=this.value.trim()"
+            style="border-color:rgba(255,165,0,0.3);font-size:11px;" />
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="prog-row" style="margin-bottom:16px;">
+        <span class="prog-label">PRIZES SET</span>
+        <div class="prog-bar"><div class="prog-fill" id="guessProgFill" style="width:0%;background:linear-gradient(90deg,#ffa500,#ff6b35);"></div></div>
+        <span class="prog-count" id="guessProgCount" style="color:#ffa500;">0/10</span>
+      </div>
+
+      <div id="guessSetupWarn" class="warn">⚠ SET ALL 10 PRIZES BEFORE PUBLISHING</div>
+      <div class="btn-row">
+        <button class="btn btn-sm" style="color:var(--text2);border-color:var(--border2);" onclick="clearGuessPrizes()">✕ CLEAR PRIZES</button>
+        <button class="btn" style="border-color:rgba(255,165,0,0.5);color:#ffa500;" onclick="publishGuessGame()">⬡ PUBLISH GUESS GAME</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin live dashboard -->
+  <div class="panel" id="guessDashPanel" style="display:none;">
+    <div class="panel-hd">
+      <div class="rt-dot"></div>
+      <div class="ph-title">Commander Guess — Live Results</div>
+      <div class="ph-badge" style="border-color:rgba(255,165,0,0.4);color:#ffa500;">LIVE</div>
+    </div>
+    <div class="panel-body" id="guessDashBody"><div class="loading-msg">WAITING FOR PLAYERS...</div></div>
+  </div>
+</div>
       <!-- QUIZ LIVE DASHBOARD -->
       <div class="panel" id="quizDashPanel" style="display:none;">
         <div class="panel-hd">
@@ -439,6 +484,20 @@
   <div class="panel-body" id="memoryPrizeBody"></div>
 </div>
 </div>
+
+<!-- ──── GUESS PLAYER PANEL ──── -->
+<div id="playerGuessPanel" style="display:none;">
+  <div class="panel">
+    <div class="panel-hd">
+      <div class="ph-dot" style="background:#ffa500;box-shadow:0 0 14px rgba(255,165,0,0.4);"></div>
+      <div class="ph-title">Commander Guess</div>
+      <div class="ph-badge" style="border-color:rgba(255,165,0,0.4);color:#ffa500;" id="guessStatusBadge">LOADING...</div>
+    </div>
+    <div class="panel-body" id="guessPlayerBody">
+      <div class="loading-msg">LOADING GAME...</div>
+    </div>
+  </div>
+</div>
     <!-- PLAYER PAST GAMES HISTORY -->
     <div class="panel" id="playerHistoryPanel" style="display:none;">
       <div class="panel-hd">
@@ -456,7 +515,6 @@
 
 <script src="mcqdb.js"></script>
 <script>
-	
 // ══════════════════════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════════════════════
@@ -622,6 +680,8 @@ function logout() {
   document.getElementById('adminSection').style.display = 'none';
   document.getElementById('playerSection').style.display = 'none';
   document.getElementById('loginScreen').style.display = 'block';
+  guessGameId = null; guessPrizes = Array(10).fill(''); guessSubmitted = false;
+if (guessChannel) { sb.removeChannel(guessChannel); guessChannel = null; }
 }
 // ══════════════════════════════════════════════════════
 // MEMORY SETUP (admin)
@@ -720,19 +780,24 @@ function selectMode(mode) {
   document.getElementById('modeCardGiveaway').className = 'mode-card' + (mode === 'giveaway' ? ' selected' : '');
   document.getElementById('modeCardQuiz').className = 'mode-card' + (mode === 'quiz' ? ' selected-quiz' : '');
   document.getElementById('modeCardMemory').className = 'mode-card' + (mode === 'memory' ? ' selected' : '');  // ADD
+  document.getElementById('modeCardGuess').className = 'mode-card' + (mode === 'guess' ? ' selected' : '');
   document.getElementById('modeSelectedLabel').style.display = 'block';
   document.getElementById('modeSelectedLabel').textContent =
     mode === 'giveaway' ? '▶ CONSTELLATION GIVEAWAY MODE SELECTED' :
     mode === 'quiz'     ? '▶ COMMANDER QUIZ MODE SELECTED' :
-                          '▶ MEMORY MATCH MODE SELECTED';              // ADD
+    mode === 'guess' ? '▶ COMMANDER GUESS MODE SELECTED' : '▶ MEMORY MATCH MODE SELECTED';             // ADD
 
   document.getElementById('giveawaySetup').style.display = mode === 'giveaway' ? 'block' : 'none';
   document.getElementById('quizSetup').style.display    = mode === 'quiz'      ? 'block' : 'none';
   document.getElementById('memorySetup').style.display  = mode === 'memory'    ? 'block' : 'none';  // ADD
+  document.getElementById('guessSetup').style.display = mode === 'guess' ? 'block' : 'none';
 
 if (mode === 'giveaway') initGiveawaySetup();
 else if (mode === 'quiz') initQuizSetup();
 else if (mode === 'memory') initMemorySetup();
+else if (mode === 'guess') initGuessSetup();
+
+
 }
 
 // ══════════════════════════════════════════════════════
@@ -784,6 +849,17 @@ async function initAdminSetup() {
   document.getElementById('memoryDashPanel').style.display = 'block';
   loadMemoryDashboard();
   subscribeToMemoryAdmin();
+} else if (detectedMode === 'guess') {
+  selectMode('guess');
+  guessGameId = data[0].id;
+  guessPrizes = gd.prizes || Array(GUESS_TOP_N).fill('');
+  guessConsolation = gd.consolation_prize || '';
+  guessCount = gd.count || 10;
+  renderGuessPrizeGrid();
+  const cpInp = document.getElementById('guess-consolation-prize');
+  if (cpInp) cpInp.value = guessConsolation;
+  document.getElementById('guessDashPanel').style.display = 'block';
+  loadGuessDashboard(); subscribeToGuessAdmin();
 }
   }
   loadHistory();
@@ -818,10 +894,13 @@ async function loadPlayerHistory() {
   panel.style.display = 'block';
   body.innerHTML = '<div class="loading-msg">LOADING YOUR HISTORY...</div>';
 
-  const { data: games, error } = await sb.from('constellation_games').select('id, data').order('created_at', { ascending: false }).limit(20);
+  const { data: games, error } = await sb
+    .from('constellation_games').select('id, data')
+    .order('created_at', { ascending: false }).limit(20);
   if (error) { body.innerHTML = `<div class="warn" style="display:block;">Error: ${error.message}</div>`; return; }
 
-  const { data: myClaims } = await sb.from('constellation_claims').select('*').eq('game_user_id', currentUser.gameId);
+  const { data: myClaims } = await sb
+    .from('constellation_claims').select('*').eq('game_user_id', currentUser.gameId);
   const myClaimsByGame = {};
   (myClaims || []).forEach(c => { myClaimsByGame[c.game_id] = c; });
 
@@ -835,115 +914,92 @@ async function loadPlayerHistory() {
 
   body.innerHTML = '';
   participated.forEach(game => {
-    const gd    = game.data;
-    const claim = myClaimsByGame[game.id];
-    const mode  = gd?.mode || 'giveaway';
-    const date  = gd?.created_at ? new Date(gd.created_at).toLocaleString() : '—';
+    const gd     = game.data;
+    const claim  = myClaimsByGame[game.id];
+    const mode   = gd?.mode || 'giveaway';
+    const date   = gd?.created_at ? new Date(gd.created_at).toLocaleDateString() : '—';
     const isActive = gd?.active === true;
 
-    const wrap = document.createElement('div');
-    wrap.className = 'history-game';
-    wrap.style.cssText = 'border-color:rgba(0,212,255,0.15);margin-bottom:14px;';
+    // Build summary line and prize display
+    let scoreHtml = '', prizeHtml = '';
 
-    let resultHtml = '';
+    if (mode === 'giveaway') {
+      const ci       = claim.constellation_index;
+      const cd       = gd?.constellations?.[ci];
+      const pal      = PALETTES[ci % PALETTES.length];
+      const revealed = gd?.revealed === true;
+      scoreHtml = `<span style="color:${pal.accent};">#${ci+1} ${cd?.name ?? '?'}</span>`;
+      prizeHtml = revealed
+        ? `<span style="color:var(--gold);">✦ ${cd?.reward ?? '?'}</span>`
+        : `<span style="color:rgba(255,200,0,0.35);">████ SEALED ████</span>`;
 
-    if (mode === 'quiz') {
-      const prizes = gd?.prizes || [];
-      const consolation = gd?.consolation_prize || '';
-      const totalQ = gd?.q_count || gd?.questions?.length || '?';
-      const myScore = claim.score ?? '?';
-      const myTime = claim.time_taken ? Math.round(claim.time_taken / 1000) + 's' : '—';
-
-      // Figure out rank by fetching all scores — we approximate from stored data
-      // Show score + prize based on position if available
-      resultHtml = `
-        <div style="padding:14px;background:rgba(191,95,255,0.05);border-radius:3px;margin-bottom:10px;">
-          <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:var(--purple);margin-bottom:10px;">◈ YOUR QUIZ RESULT</div>
-          <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
-            <div style="text-align:center;">
-              <div style="font-family:'Orbitron',monospace;font-size:28px;color:var(--purple);text-shadow:0 0 20px rgba(191,95,255,0.4);">${myScore}/${totalQ}</div>
-              <div style="font-size:9px;color:var(--text2);letter-spacing:1px;">SCORE</div>
-            </div>
-            <div style="text-align:center;">
-              <div style="font-family:'Orbitron',monospace;font-size:22px;color:var(--text);">${myTime}</div>
-              <div style="font-size:9px;color:var(--text2);letter-spacing:1px;">TIME</div>
-            </div>
-          </div>
-        </div>
-        ${prizes.length ? `
-        <div style="font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;">PRIZE TABLE</div>
-        <div style="background:var(--bg3);border:1px solid rgba(191,95,255,0.15);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-          ${prizes.map((p,i)=>{const rl=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;return`<div style="display:flex;gap:10px;padding:7px 12px;border-bottom:1px solid rgba(191,95,255,0.08);font-size:10px;"><span style="min-width:32px;color:var(--gold);">${rl}</span><span style="color:#ffe8aa;">${p}</span></div>`;}).join('')}
-          ${consolation?`<div style="display:flex;gap:10px;padding:7px 12px;font-size:10px;background:rgba(255,107,53,0.04);"><span style="min-width:32px;color:var(--orange);">rest</span><span style="color:#ffe8aa;">${consolation}</span></div>`:''}
-        </div>` : ''}`;
+    } else if (mode === 'quiz') {
+      const totalQ  = gd?.q_count || gd?.questions?.length || '?';
+      const prizes  = gd?.prizes || [];
+      const consol  = gd?.consolation_prize || '';
+      scoreHtml = `<span style="color:var(--purple);">${claim.score ?? '?'}/${totalQ}</span>`;
+      // Determine rank from claim position (we don't have all scores here, just show consolation if stored)
+      prizeHtml = consol
+        ? `<span style="color:var(--orange);">${consol}</span>`
+        : prizes[0]
+        ? `<span style="color:var(--text2);">See prizes below</span>`
+        : '';
 
     } else if (mode === 'memory') {
-  const prizes = gd?.prizes || [];
-  const consolation = gd?.consolation_prize || '';
-  const myScore = claim.score ?? '?';
-  const myTime = claim.time_taken ? Math.round(claim.time_taken / 1000) + 's' : '—';
-  resultHtml = `
-    <div style="padding:14px;background:rgba(0,255,204,0.05);border:1px solid rgba(0,255,204,0.2);border-radius:3px;margin-bottom:10px;">
-      <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:#00ffcc;margin-bottom:10px;">◈ YOUR MEMORY MATCH RESULT</div>
-      <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center;">
-        <div style="text-align:center;">
-          <div style="font-family:'Orbitron',monospace;font-size:28px;color:#00ffcc;text-shadow:0 0 20px rgba(0,255,204,0.4);">${myScore}/${MEMORY_PAIR_COUNT}</div>
-          <div style="font-size:9px;color:var(--text2);letter-spacing:1px;">PAIRS FOUND</div>
-        </div>
-        <div style="text-align:center;">
-          <div style="font-family:'Orbitron',monospace;font-size:22px;color:var(--text);">${myTime}</div>
-          <div style="font-size:9px;color:var(--text2);letter-spacing:1px;">TIME</div>
-        </div>
-      </div>
-    </div>
-    ${prizes.length ? `
-    <div style="font-size:9px;letter-spacing:2px;color:#00ffcc;margin-bottom:8px;">✦ PRIZE TABLE — TOP ${prizes.length} WIN</div>
-    <div style="background:var(--bg3);border:1px solid rgba(0,255,204,0.15);border-radius:4px;overflow:hidden;margin-bottom:8px;">
-      ${prizes.map((p,i)=>{const rl=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;return`<div style="display:flex;gap:10px;padding:7px 12px;border-bottom:1px solid rgba(0,255,204,0.08);font-size:10px;"><span style="min-width:44px;color:#00ffcc;">${rl}</span><span style="color:#ffe8aa;">${p}</span></div>`;}).join('')}
-      ${consolation?`<div style="display:flex;gap:10px;padding:7px 12px;font-size:10px;background:rgba(255,107,53,0.04);"><span style="min-width:44px;color:var(--orange);">rest</span><span style="color:#ffe8aa;">${consolation}</span></div>`:''}
-    </div>` : ''}`; 
-	} else {
-      const ci = claim.constellation_index;
-      const cd = gd?.constellations?.[ci];
-      const pal = PALETTES[ci % PALETTES.length];
-      const reward = cd?.reward ?? '?';
-      const revealed = gd?.revealed === true;
+      const prizes = gd?.prizes || [];
+      const consol = gd?.consolation_prize || '';
+      scoreHtml = `<span style="color:#00ffcc;">${claim.score ?? '?'}/${MEMORY_PAIR_COUNT} pairs</span>`;
+      prizeHtml = consol
+        ? `<span style="color:var(--orange);">${consol}</span>`
+        : prizes[0] ? `<span style="color:var(--text2);">See prizes below</span>` : '';
 
-      resultHtml = `
-        <div style="padding:14px;border-radius:3px;margin-bottom:10px;background:${revealed ? 'linear-gradient(135deg,rgba(255,215,0,0.07),rgba(0,212,255,0.04))' : 'rgba(0,212,255,0.04)'};border:1px solid ${revealed ? 'rgba(255,215,0,0.3)' : 'rgba(0,212,255,0.15)'};">
-          <div style="font-family:'Orbitron',monospace;font-size:9px;letter-spacing:2px;color:${pal.accent};margin-bottom:8px;">◈ YOUR CONSTELLATION</div>
-          <div style="font-family:'Orbitron',monospace;font-size:16px;color:${pal.accent};text-shadow:0 0 10px ${pal.accent}55;margin-bottom:6px;">#${ci+1} ${cd?.name ?? '?'}</div>
-          <div style="font-size:9px;color:var(--text2);margin-bottom:12px;">${cd?.latin ?? ''}</div>
-          ${revealed ? `
-          <div style="font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:6px;">✦ YOUR REWARD</div>
-          <div style="font-size:20px;color:var(--gold);text-shadow:0 0 16px rgba(255,215,0,0.4);word-break:break-word;">${reward}</div>
-          ` : `
-          <div style="font-size:11px;color:rgba(255,200,0,0.4);letter-spacing:2px;">████ REWARD SEALED ████</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:4px;">Admin hasn't revealed rewards yet</div>
-          `}
-        </div>
-        ${revealed && gd?.constellations ? `
-        <div style="font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;">ALL RESULTS</div>
-        <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:3px;overflow:hidden;">
-          ${gd.constellations.map((c2,idx)=>{const p=PALETTES[idx%PALETTES.length];const isMine=idx===ci;return`<div style="display:flex;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border2);font-size:10px;${isMine?'background:rgba(255,215,0,0.06);':''}"><span style="color:${p.accent};min-width:24px;font-family:'Orbitron',monospace;">${idx+1}</span><span style="color:${p.accent};min-width:100px;">${c2.name}</span><span style="color:var(--gold);flex:1;">${c2.reward}</span>${isMine?'<span style="color:var(--green);">◀ YOU</span>':''}</div>`;}).join('')}
-        </div>` : ''}`;
+    } else if (mode === 'guess') {
+      const total  = gd?.count || gd?.commanders?.length || '?';
+      const prizes = gd?.prizes || [];
+      const consol = gd?.consolation_prize || '';
+      scoreHtml = `<span style="color:#ffa500;">${claim.score ?? '?'}/${typeof total === 'number' ? total * 2 : '?'} pts</span>`;
+      prizeHtml = consol
+        ? `<span style="color:var(--orange);">${consol}</span>`
+        : prizes[0] ? `<span style="color:var(--text2);">See prizes below</span>` : '';
     }
 
-    const modeBadge = `<span class="hg-badge hg-badge-${mode}" style="font-size:9px;">${mode.toUpperCase()}</span>`;
-    const statusBadge = isActive
-      ? `<span class="hg-badge" style="border-color:rgba(57,255,20,0.4);color:var(--green);font-size:9px;">LIVE</span>`
-      : `<span class="hg-badge hg-badge-ended" style="font-size:9px;">ENDED</span>`;
+    const modeColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : 'var(--gold)';
+    const statusDot = isActive
+      ? `<span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px rgba(57,255,20,0.6);flex-shrink:0;"></span>`
+      : `<span style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block;flex-shrink:0;"></span>`;
 
+    // Prize table for detail section
+    const prizes = gd?.prizes || [];
+    const consol = gd?.consolation_prize || '';
+    let prizeTableHtml = '';
+    if (prizes.length) {
+      prizeTableHtml = `<div style="margin-top:10px;">
+        <div style="font-size:9px;letter-spacing:2px;color:${modeColor};margin-bottom:6px;">✦ PRIZE TABLE</div>
+        <div style="background:var(--bg3);border:1px solid ${modeColor}22;border-radius:3px;overflow:hidden;">
+          ${prizes.map((p,i)=>{const rl=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;return`<div style="display:flex;gap:10px;padding:6px 12px;border-bottom:1px solid ${modeColor}11;font-size:10px;"><span style="min-width:36px;color:${modeColor};">${rl}</span><span style="color:#ffe8aa;">${p}</span></div>`;}).join('')}
+          ${consol?`<div style="display:flex;gap:10px;padding:6px 12px;font-size:10px;"><span style="min-width:36px;color:var(--orange);">rest</span><span style="color:#ffe8aa;">${consol}</span></div>`:''}
+        </div>
+      </div>`;
+    }
+
+    const timeSec = claim.time_taken ? Math.round(claim.time_taken / 1000) + 's' : null;
+
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'border:1px solid var(--border2);border-radius:4px;margin-bottom:10px;overflow:hidden;background:var(--bg2);';
     wrap.innerHTML = `
-      <div class="history-game-hd" onclick="this.nextElementSibling.classList.toggle('open')" style="padding:10px 12px;">
-        <div style="width:7px;height:7px;border-radius:50%;background:${mode==='quiz'?'var(--purple)':'var(--gold)'};flex-shrink:0;"></div>
-        <div style="font-family:'Orbitron',monospace;font-size:10px;color:#c8dde8;flex:1;">${game.id}</div>
-        ${modeBadge} ${statusBadge}
-        <div style="font-size:9px;color:var(--text3);">${date}</div>
-        <div style="color:var(--text2);font-size:12px;margin-left:8px;">▾</div>
+      <div onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'"
+        style="display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;user-select:none;">
+        ${statusDot}
+        <span style="font-size:9px;font-family:'Orbitron',monospace;color:${modeColor};letter-spacing:1px;min-width:48px;">${mode.toUpperCase()}</span>
+        <span style="flex:1;font-size:11px;color:var(--text);">${scoreHtml}</span>
+        ${prizeHtml ? `<span style="font-size:11px;">${prizeHtml}</span>` : ''}
+        ${timeSec ? `<span style="font-size:9px;color:var(--text3);">⏱ ${timeSec}</span>` : ''}
+        <span style="font-size:9px;color:var(--text3);margin-left:4px;">${date}</span>
+        <span style="font-size:12px;color:var(--text2);margin-left:6px;">▸</span>
       </div>
-      <div class="history-game-body open" style="padding:14px;">
-        ${resultHtml}
+      <div style="display:none;padding:12px 14px;border-top:1px solid var(--border2);">
+        <div style="font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:6px;">GAME ID: ${game.id}</div>
+        ${prizeTableHtml}
       </div>`;
     body.appendChild(wrap);
   });
@@ -1229,7 +1285,7 @@ async function publishQuiz() {
 // CLEAR GAME
 // ══════════════════════════════════════════════════════
 async function clearGame() {
-  const gid = activeGameId || activeQuizId;
+const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId;
   if (!gid) return;
   if (!confirm('End this game? Players will see their results revealed.')) return;
   const { data: gameData } = await sb.from('constellation_games').select('data').eq('id', gid).single();
@@ -1245,6 +1301,9 @@ async function clearGame() {
   document.getElementById('memoryDashPanel').style.display = 'none';  // ADD
 if (memoryChannel) { sb.removeChannel(memoryChannel); memoryChannel = null; }  // ADD
 activeMemoryId = null;  // ADD
+document.getElementById('guessDashPanel').style.display = 'none';
+if (guessChannel) { sb.removeChannel(guessChannel); guessChannel = null; }
+guessGameId = null;
 }
 
 // ══════════════════════════════════════════════════════
@@ -1372,6 +1431,11 @@ async function loadPlayerView() {
   activeMemoryId = game.id;
   document.getElementById('playerMemoryPanel').style.display = 'block';
   loadPlayerMemory(gd);
+} else if (mode === 'guess') {
+  guessGameId = game.id;
+  guessCount  = gd.count || 10;
+  document.getElementById('playerGuessPanel').style.display = 'block';
+  loadPlayerGuess(gd);
 } else {
     activeGameId = game.id;
     N = gd.n;
@@ -2067,8 +2131,9 @@ function toggleHistory(id, headerElement) {
 window.toggleHistory = toggleHistory;
 
 function renderHistoryBody(game, gd, claims, mode) {
-  if (mode === 'quiz') return renderHistoryQuiz(gd, claims);
+  if (mode === 'quiz')   return renderHistoryQuiz(gd, claims);
   if (mode === 'memory') return renderHistoryMemory(gd, claims);
+  if (mode === 'guess')  return renderHistoryGuess(gd, claims);
   return renderHistoryGiveaway(gd, claims);
 }
 
@@ -2105,7 +2170,58 @@ function renderHistoryQuiz(gd, claims) {
   html += '</tbody></table>';
   return html;
 }
+function renderHistoryGuess(gd, claims) {
+  const prizes      = gd.prizes || [];
+  const consolation = gd.consolation_prize || '';
+  const total       = gd.count || gd.commanders?.length || '?';
 
+  claims.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+
+  let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+    <div style="font-size:10px;color:var(--text2);">Commanders: <span style="color:#ffa500;">${total}</span></div>
+    <div style="font-size:10px;color:var(--text2);">Max score: <span style="color:#ffa500;">${typeof total === 'number' ? total * 2 : '?'} pts</span></div>
+    <div style="font-size:10px;color:var(--text2);">Players: <span style="color:#ffa500;">${claims.length}</span></div>
+    ${consolation ? `<div style="font-size:10px;color:var(--text2);">Consolation: <span style="color:var(--orange);">${consolation}</span></div>` : ''}
+  </div>`;
+
+  if (!claims.length) return html + '<div style="font-size:10px;color:var(--text3);">No submissions yet.</div>';
+
+  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>SCORE</th><th>TIME</th><th>PRIZE</th></tr></thead><tbody>';
+  claims.forEach((c, i) => {
+    const rankLabel  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+    const inTop      = i < prizes.length;
+    const prize      = inTop ? prizes[i] : (consolation || '—');
+    const prizeColor = inTop ? '#ffa500' : consolation ? 'var(--orange)' : 'var(--text3)';
+    const timeSec    = c.time_taken ? Math.round(c.time_taken / 1000) + 's' : '—';
+    const maxPts     = typeof total === 'number' ? total * 2 : '?';
+    html += `<tr style="${inTop ? 'background:rgba(255,165,0,0.04);' : ''}">
+      <td style="font-family:'Orbitron',monospace;font-size:13px;">${rankLabel}</td>
+      <td style="color:var(--text);">${c.username}<br><span style="color:var(--text3);font-size:9px;font-family:'Share Tech Mono',monospace;">${c.game_user_id}</span></td>
+      <td style="color:#ffa500;font-family:'Orbitron',monospace;">${c.score ?? '?'}/${maxPts}</td>
+      <td style="color:var(--text2);font-size:10px;">${timeSec}</td>
+      <td style="color:${prizeColor};font-size:11px;">${prize}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+
+  if (prizes.length) {
+    html += `<div style="margin-top:14px;font-size:9px;letter-spacing:2px;color:#ffa500;margin-bottom:8px;">✦ PRIZE TABLE</div>
+    <div style="background:var(--bg3);border:1px solid rgba(255,165,0,0.15);border-radius:4px;overflow:hidden;">`;
+    prizes.forEach((p, i) => {
+      const rl = i === 0 ? '🥇 1st' : i === 1 ? '🥈 2nd' : i === 2 ? '🥉 3rd' : `#${i+1}`;
+      html += `<div style="display:flex;gap:10px;padding:7px 12px;border-bottom:1px solid rgba(255,165,0,0.08);font-size:10px;">
+        <span style="min-width:44px;color:#ffa500;">${rl}</span>
+        <span style="color:#ffe8aa;">${p}</span>
+      </div>`;
+    });
+    if (consolation) html += `<div style="display:flex;gap:10px;padding:7px 12px;font-size:10px;background:rgba(255,107,53,0.04);">
+      <span style="min-width:44px;color:var(--orange);">rest</span>
+      <span style="color:#ffe8aa;">${consolation}</span>
+    </div>`;
+    html += '</div>';
+  }
+  return html;
+}
 function renderHistoryGiveaway(gd, claims) {
   const constellations = gd.constellations || [];
   const n = gd.n || constellations.length;
@@ -2148,5 +2264,7 @@ function initHeaderStars(){const cv=document.getElementById('headerStars');const
 document.addEventListener('DOMContentLoaded', () => { initHeaderStars(); initSupabase(); });
 </script>
 <script src="memoryGame.js"></script>
+<script src="guessCommanders.js"></script>
+<script src="guessGame.js"></script>
 </body>
 </html>

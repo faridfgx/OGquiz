@@ -5,6 +5,9 @@
   --text: #c8dde8; --text2: #5a7a8a; --text3: #3a5060;
   --border: rgba(0,212,255,0.15); --border2: rgba(0,212,255,0.08);
 }
+html {
+  zoom: 1.07;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: 'Share Tech Mono', monospace; min-height: 100vh; }
 .scanline { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px); pointer-events: none; z-index: 9999; }

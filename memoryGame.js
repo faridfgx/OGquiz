@@ -50,7 +50,7 @@ async function publishMemoryGame() {
   const seed = Date.now() % 999983;
   const deck = buildMemoryDeck(seed);
   const gameId = 'MEM_' + Date.now();
-
+const endsAt = getSelectedEndsAt();
   const gameData = {
     id: gameId,
     mode: 'memory',
@@ -60,6 +60,7 @@ async function publishMemoryGame() {
     consolation_prize: memConsolationPrize || '',
     active: true,
     revealed: false,
+	ends_at: endsAt,
     created_at: new Date().toISOString()
   };
 
@@ -76,6 +77,7 @@ async function publishMemoryGame() {
   loadMemoryDashboard();
   subscribeToMemoryAdmin();
   loadHistory();
+  startGameTimer(endsAt, gameId);
   alert(`✓ Memory Match published with ${MEM_TOP_N} prizes! Share the URL with players.`);
 }
 
@@ -147,8 +149,39 @@ async function loadPlayerMemory(gd) {
   }
 
 document.getElementById('memoryStatusBadge').textContent = 'ACTIVE · 5×5 GRID';
-showMemoryPrizeTable(gd);
-initMemoryBoard(gd);
+    if (gd.ends_at) {
+      const badge = document.getElementById('memoryStatusBadge');
+      startPlayerTimer(badge, gd.ends_at, () => loadPlayerView());
+    }
+  showMemoryPrizeTable(gd);
+  initMemoryBoard(gd);
+
+  // Subscribe to game-end events from the DB cron
+  if (memoryChannel) sb.removeChannel(memoryChannel);
+  memoryChannel = sb.channel('memory-player-' + activeMemoryId)
+    .on('postgres_changes', {
+      event: 'UPDATE', schema: 'public',
+      table: 'constellation_games',
+      filter: `id=eq.${activeMemoryId}`
+    }, async (payload) => {
+      const gd2 = payload.new?.data;
+      if (gd2 && !gd2.active) {
+        stopPlayerTimer();
+        if (memTimerInterval) { clearInterval(memTimerInterval); memTimerInterval = null; }
+        memLocked = true; // freeze board immediately
+        const body = document.getElementById('memoryPlayerBody');
+        body.innerHTML = `<div style="padding:20px;text-align:center;color:var(--danger);font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;">
+          ⚠ GAME ENDED — TIME IS UP.<br>
+          <span style="color:var(--text2);font-size:10px;margin-top:6px;display:block;">Score not submitted — game closed before you finished.</span>
+        </div>`;
+        // Still show the results/leaderboard so player can see final standings
+        const { data: scores } = await sb.from('constellation_claims').select('*').eq('game_id', activeMemoryId);
+        if (scores && scores.length) {
+          showMemoryResults({ score: memPairs, time_taken: null }, gd2, scores);
+        }
+      }
+    })
+    .subscribe();
 }
 
 function showMemoryPrizeTable(gd) {
@@ -640,6 +673,22 @@ function showMemMsg(text, type) {
 // ════════════════════════════════════════════════════════
 async function finishMemory() {
   if (memTimerInterval) clearInterval(memTimerInterval);
+
+  // Guard: check the game is still active before submitting
+  const { data: gameCheck } = await sb
+    .from('constellation_games')
+    .select('data')
+    .eq('id', activeMemoryId)
+    .single();
+  if (!gameCheck?.data?.active) {
+    const body = document.getElementById('memoryPlayerBody');
+    body.innerHTML = `<div style="padding:20px;text-align:center;color:var(--danger);font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:1px;">
+      ⚠ GAME HAS ENDED — SCORE NOT SUBMITTED.<br>
+      <span style="color:var(--text2);font-size:10px;margin-top:6px;display:block;">The event closed before your result could be saved.</span>
+    </div>`;
+    return;
+  }
+
   const timeTaken = Date.now() - memStartTime;
   const totalQ = MEMORY_PAIR_COUNT;
 

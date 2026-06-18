@@ -1,12 +1,3 @@
-// ════════════════════════════════════════════════════════════════════════
-// guessGame.js — Commander Guess Game
-// Integrates with index.html exactly like memoryGame.js / quiz
-//
-// HOW TO INTEGRATE:
-//  1. Add <script src="guessGame.js"></script> after mcqdb.js in index.html
-//  2. Add the HTML blocks (search "PASTE IN index.html" below)
-//  3. Add the 4 hook lines into index.html functions (see bottom of file)
-// ════════════════════════════════════════════════════════════════════════
 
 // ── State ────────────────────────────────────────────────────────────────
 let guessGameId       = null;
@@ -28,6 +19,7 @@ let guessTimerHandle  = null;
 // ADMIN — SETUP
 // ════════════════════════════════════════════════════════════════════════
 function initGuessSetup() {
+	document.getElementById('guessTimerPicker').innerHTML = renderTimerPickerHtml('#ffa500');
   guessPrizes      = Array(GUESS_TOP_N).fill('');
   guessConsolation = '';
   const inp = document.getElementById('guess-consolation-prize');
@@ -138,7 +130,8 @@ async function publishGuessGame() {
   const pool = [...(window.commandersList || [])];
   const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, guessCount);
 
-  const gameId = 'GUE_' + Date.now();
+  const gameId  = 'GUE_' + Date.now();
+  const endsAt   = typeof getSelectedEndsAt === 'function' ? getSelectedEndsAt() : null;
   const gameData = {
     id: gameId, mode: 'guess',
     commanders: shuffled,
@@ -146,6 +139,7 @@ async function publishGuessGame() {
     prizes: guessPrizes,
     consolation_prize: guessConsolation || '',
     active: true, revealed: false,
+    ends_at: endsAt,
     created_at: new Date().toISOString()
   };
 
@@ -159,8 +153,9 @@ async function publishGuessGame() {
   document.getElementById('guessDashPanel').style.display = 'block';
   document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-active">LIVE</span>';
   loadGuessDashboard(); subscribeToGuessAdmin();
+  if (typeof startGameTimer === 'function') startGameTimer(endsAt, gameId);
   if (typeof loadHistory === 'function') loadHistory();
-  alert(`✓ Guess game published! ${guessCount} commanders selected. Share the URL with players.`);
+  alert(`✓ Guess game is live! ${guessCount} commanders · Share the page URL with players.`);
 }
 
 // ── Admin Dashboard ──────────────────────────────────────────────────────
@@ -191,12 +186,15 @@ function renderGuessDashboard(scores) {
     const prize = i < guessPrizes.length ? guessPrizes[i] : null;
     const timeSec = s.time_taken ? Math.round(s.time_taken / 1000) : '?';
     const inTop = i < GUESS_TOP_N;
+    const meta = s.meta || {};
+    const nameHits  = meta.name_hits  ?? '?';
+    const skillHits = meta.skill_hits ?? '?';
     html += `
       <div class="leaderboard-row" style="border-color:${inTop ? 'rgba(255,165,0,0.15)' : 'rgba(255,255,255,0.04)'}">
         <div class="lb-rank" style="color:${inTop ? '#ffa500' : 'var(--text2)'}; font-size:${i < 3 ? '20px' : '13px'};">${rankLabel}</div>
         <div>
           <div class="lb-name">${s.username}</div>
-          <div class="lb-time" style="color:var(--text2);">ID: ${s.game_user_id} · ⏱ ${timeSec}s</div>
+          <div class="lb-time" style="color:var(--text2);">ID: ${s.game_user_id} · ⏱ ${timeSec}s · 👤 ${nameHits} names · ⚡ ${skillHits} abilities</div>
         </div>
         <div style="text-align:right;">
           <div class="lb-score" style="color:#ffa500;">${s.score} pts</div>
@@ -227,7 +225,10 @@ async function loadPlayerGuess(gd) {
   guessChoices    = [];
 
   document.getElementById('guessStatusBadge').textContent = `ACTIVE · ${guessCount} COMMANDERS`;
-
+    if (gd.ends_at) {
+      const badge = document.getElementById('guessStatusBadge');
+      startPlayerTimer(badge, gd.ends_at, () => loadPlayerView());
+    }
   // Check if already submitted
   const { data: existing } = await sb.from('constellation_claims')
     .select('*').eq('game_id', guessGameId).eq('game_user_id', currentUser.gameId);
@@ -509,9 +510,11 @@ async function submitGuessGame(forcedGd) {
   });
 
   const score = nameHits + skillHits;
+  const metaPayload = { name_hits: nameHits, skill_hits: skillHits, answers: guessAnswers };
 
-  // Only insert the columns that exist in the shared constellation_claims table.
-  // `meta` is not a column in this schema — omit it to avoid a 400 error.
+  // NOTE: no custom `id` here — the other game modes (quiz/giveaway) let the
+  // table auto-generate its primary key, and constellation_index is a required
+  // column on this shared table even though guess mode doesn't use it.
   const baseClaim = {
     game_id:             guessGameId,
     constellation_index: 0,
@@ -522,7 +525,13 @@ async function submitGuessGame(forcedGd) {
     claimed_at:          new Date().toISOString()
   };
 
-  const { error } = await sb.from('constellation_claims').insert(baseClaim);
+  let { error } = await sb.from('constellation_claims').insert({ ...baseClaim, meta: metaPayload });
+
+  // If this project's table doesn't have a `meta` column, retry without it
+  // so the score still saves (per-commander breakdown just won't be shown).
+  if (error && /meta/i.test(error.message || '') && /column|schema cache/i.test(error.message || '')) {
+    ({ error } = await sb.from('constellation_claims').insert(baseClaim));
+  }
 
   if (error && !String(error.message).toLowerCase().includes('duplicate')) {
     alert('Error saving score: ' + error.message);
@@ -541,7 +550,7 @@ async function submitGuessGame(forcedGd) {
   // "already submitted / duplicate" case)
   const { data: savedRows } = await sb.from('constellation_claims')
     .select('*').eq('game_id', guessGameId).eq('game_user_id', currentUser.gameId);
-  const claim = (savedRows && savedRows[0]) || baseClaim;
+  const claim = (savedRows && savedRows[0]) || { ...baseClaim, meta: metaPayload };
 
   showGuessResults(claim, gd);
 }

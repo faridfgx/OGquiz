@@ -22,7 +22,7 @@
 <!-- LOGIN SCREEN -->
 <div id="loginScreen" style="display:none;">
   <div class="login-wrap">
-  <!--
+  
     <div class="login-panel">
       <div class="login-tabs">
         <button class="login-tab active" onclick="switchLoginTab('player',event)">◉ PLAYER LOGIN</button>
@@ -40,8 +40,8 @@
         <div class="btn-row"><button class="btn btn-gold" onclick="loginAdmin()">⬡ ACCESS ADMIN PANEL</button></div>
       </div>
     </div>
-	-->
-    <div style="
+	<!--
+	    <div style="
       max-width:700px;
       margin:auto;
       padding:40px;
@@ -70,6 +70,9 @@
         Please check back later.
       </div>
     </div>
+	
+	-->
+
 	
   </div>
 </div>
@@ -144,6 +147,7 @@
           </div>
           <div class="const-grid" id="constGrid"></div>
           <div id="setupWarn" class="warn">⚠ ENTER ALL REWARDS BEFORE PUBLISHING</div>
+		  <div id="giveawayTimerPicker"></div>
           <div class="btn-row">
             <button class="btn btn-cyan" onclick="reroll()">↺ REROLL SYSTEMS</button>
             <button class="btn btn-green" onclick="publishGame()">⬡ PUBLISH GIVEAWAY</button>
@@ -249,6 +253,7 @@
                 <div class="reward-suggestions" id="qsug-dd-consolation" style="z-index:9999;"></div>
               </div>
             </div>
+			 <div id="quizTimerPicker"></div>
             <div class="btn-row" style="margin-top:12px;">
               <button class="btn btn-purple btn-sm" onclick="clearQuizPrizes()">✕ CLEAR PRIZES</button>
             </div>
@@ -299,6 +304,7 @@
       </div>
 
       <div id="memSetupWarn" class="warn">⚠ SET ALL 5 PRIZES BEFORE PUBLISHING</div>
+	  <div id="memoryTimerPicker"></div>
       <div class="btn-row">
         <button class="btn btn-sm" style="color:var(--text2);border-color:var(--border2);" onclick="clearMemPrizes()">✕ CLEAR PRIZES</button>
         <button class="btn" style="border-color:#00ffcc55;color:#00ffcc;" onclick="publishMemoryGame()">⬡ PUBLISH MEMORY GAME</button>
@@ -366,6 +372,7 @@
       </div>
 
       <div id="guessSetupWarn" class="warn">⚠ SET ALL 10 PRIZES BEFORE PUBLISHING</div>
+	  <div id="guessTimerPicker"></div>
       <div class="btn-row">
         <button class="btn btn-sm" style="color:var(--text2);border-color:var(--border2);" onclick="clearGuessPrizes()">✕ CLEAR PRIZES</button>
         <button class="btn" style="border-color:rgba(255,165,0,0.5);color:#ffa500;" onclick="publishGuessGame()">⬡ PUBLISH GUESS GAME</button>
@@ -542,6 +549,7 @@
 </div><!-- /wrap -->
 
 <script src="mcqdb.js"></script>
+<script src="gameTimer.js"></script>
 <script>
 // ══════════════════════════════════════════════════════
 // CONSTANTS
@@ -701,6 +709,8 @@ function showApp() {
   }
 }
 function logout() {
+      stopGameTimer();
+      stopPlayerTimer();
   currentUser = null; claimsData = []; playerRewardsSeed = null; quizPrizes = Array(QUIZ_TOP_N).fill('');
   if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel = null; }
   if (quizChannel) { sb.removeChannel(quizChannel); quizChannel = null; }
@@ -715,6 +725,7 @@ if (guessChannel) { sb.removeChannel(guessChannel); guessChannel = null; }
 // MEMORY SETUP (admin)
 // ══════════════════════════════════════════════════════
 function initMemorySetup() {
+ document.getElementById('memoryTimerPicker').innerHTML = renderTimerPickerHtml('#00ffcc');
   memPrizes = Array(MEM_TOP_N).fill('');
   memConsolationPrize = '';
   const inp = document.getElementById('mem-consolation-prize');
@@ -854,6 +865,7 @@ async function initAdminSetup() {
       document.getElementById('adminDashPanel').style.display = 'block';
       loadAdminDashboard();
       subscribeToClaimsAdmin();
+	  
     } else if (detectedMode === 'quiz') {
       selectMode('quiz');
       activeQuizId = data[0].id;
@@ -889,6 +901,7 @@ async function initAdminSetup() {
   document.getElementById('guessDashPanel').style.display = 'block';
   loadGuessDashboard(); subscribeToGuessAdmin();
 }
+await checkAndResumeTimer(gd, data[0].id);
   }
   loadHistory();
 }
@@ -898,6 +911,7 @@ async function initAdminSetup() {
 // ══════════════════════════════════════════════════════
 function initGiveawaySetup() {
   pick(); initCountBtns(); renderAdminCards();
+  document.getElementById('giveawayTimerPicker').innerHTML = renderTimerPickerHtml('var(--accent)');
 }
 function mulberry32(seed) { return function(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return((t^t>>>14)>>>0)/4294967296; }; }
 function shuffle(a) { return [...a].sort(() => Math.random() - .5); }
@@ -1168,10 +1182,13 @@ async function publishGame() {
   if (missing > 0) { warn.style.display = 'block'; setTimeout(()=>warn.style.display='none',3000); return; }
   warn.style.display = 'none';
   const gameId = 'GVW_' + Date.now();
+  const endsAt = getSelectedEndsAt();          // ← moved up
   const gameData = {
     id: gameId, mode: 'giveaway',
     constellations: chosen.map((c, i) => ({ ...c, index: i, reward: rewards[i], palette: PALETTES[i % PALETTES.length] })),
-    n: N, active: true, revealed: false, created_at: new Date().toISOString()
+    n: N, active: true, revealed: false,
+    ends_at: endsAt,                            // ← added
+    created_at: new Date().toISOString()
   };
   const { error } = await sb.from('constellation_games').upsert({ id: gameId, data: gameData });
   if (error) { alert('Error publishing: ' + error.message); return; }
@@ -1182,6 +1199,7 @@ async function publishGame() {
   document.getElementById('adminDashPanel').style.display = 'block';
   document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-active">LIVE</span>';
   loadAdminDashboard(); subscribeToClaimsAdmin(); loadHistory();
+  startGameTimer(endsAt, gameId);               // ← endsAt is already defined, no redeclare needed
   alert('✓ Giveaway published! Share the URL with players.');
 }
 
@@ -1189,6 +1207,7 @@ async function publishGame() {
 // QUIZ SETUP
 // ══════════════════════════════════════════════════════
 function initQuizSetup() {
+document.getElementById('quizTimerPicker').innerHTML = renderTimerPickerHtml('var(--purple)');
   quizQCount = 10;
   quizPrizes = Array(QUIZ_TOP_N).fill('');
   consolationPrize = '';
@@ -1286,6 +1305,7 @@ async function publishQuiz() {
 
   const actualCount = selected.length;
   const gameId = 'QUZ_' + Date.now();
+  const endsAt  = getSelectedEndsAt();
   const gameData = {
     id: gameId, mode: 'quiz',
     questions: selected,
@@ -1294,6 +1314,7 @@ async function publishQuiz() {
     prizes: quizPrizes,
     consolation_prize: consolationPrize || '',
     active: true, revealed: false,
+	ends_at: endsAt,
     created_at: new Date().toISOString()
   };
   const { error } = await sb.from('constellation_games').upsert({ id: gameId, data: gameData });
@@ -1306,6 +1327,7 @@ async function publishQuiz() {
   document.getElementById('quizDashPanel').style.display = 'block';
   document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-active">LIVE</span>';
   loadQuizDashboard(); subscribeToQuizAdmin(); loadHistory();
+  startGameTimer(endsAt, gameId);
   alert(`✓ Quiz published! ${actualCount} questions · ${quizQMode === 'handpick' ? 'Hand-picked' : 'Random'} selection. Share the URL with players.`);
 }
 
@@ -1313,6 +1335,7 @@ async function publishQuiz() {
 // CLEAR GAME
 // ══════════════════════════════════════════════════════
 async function clearGame() {
+stopGameTimer(); 
 const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId;
   if (!gid) return;
   if (!confirm('End this game? Players will see their results revealed.')) return;
@@ -1367,7 +1390,9 @@ function renderAdminDashboard() {
   <table class="admin-table"><thead><tr><th>#</th><th>CONSTELLATION</th><th>REWARD</th><th>CLAIMERS (max ${MAX_PER_CONSTELLATION})</th><th>SLOTS</th></tr></thead><tbody>`;
   chosen.forEach((c, i) => {
     const pal=PALETTES[i%PALETTES.length],claimers=byConst[i]||[];
-    const claimerTags=claimers.length>0?claimers.map(cl=>`<span class="claim-tag" style="border-color:${pal.accent}44;color:${pal.accent};background:${pal.accent}10;">${cl.username} <button onclick="adminEraseClaim('${cl.id}','${cl.username}')" style="background:transparent;border:none;color:rgba(255,51,68,0.6);cursor:pointer;font-size:9px;padding:0 0 0 4px;" title="Erase claim">✕</button></span>`).join(''):'<span class="empty-dash">— no claims —</span>';
+const claimerTags = claimers.length > 0
+  ? claimers.map(cl => `<span class="claim-tag" style="border-color:${pal.accent}44;color:${pal.accent};background:${pal.accent}10;">${cl.username} <span style="opacity:.55;font-size:9px;">(${cl.game_user_id})</span> <button onclick="adminEraseClaim('${cl.id}','${cl.username}')" style="background:transparent;border:none;color:rgba(255,51,68,0.6);cursor:pointer;font-size:9px;padding:0 0 0 4px;" title="Erase claim">✕</button></span>`).join('')
+  : '<span class="empty-dash">— no claims —</span>';
     const slotColor=claimers.length>=MAX_PER_CONSTELLATION?'var(--danger)':claimers.length>0?'var(--gold)':'var(--text2)';
     html+=`<tr><td style="color:${pal.accent};font-family:'Orbitron',monospace;font-size:11px;">${i+1}</td><td><span style="color:${pal.accent};font-weight:700;">${c.name}</span><br><span style="color:var(--text2);font-size:9px;">${c.latin}</span></td><td style="color:var(--gold);">${rewards[i]||'—'}</td><td>${claimerTags}</td><td style="color:${slotColor};font-family:'Orbitron',monospace;">${claimers.length}/${MAX_PER_CONSTELLATION}</td></tr>`;
   });
@@ -1495,7 +1520,10 @@ async function loadPlayerView() {
 
     document.getElementById('playerClaimBadge').textContent =
       'GAME: ' + activeGameId;
-
+    if (gd.ends_at) {
+      const badge = document.getElementById('playerClaimBadge');
+      startPlayerTimer(badge, gd.ends_at, () => loadPlayerView());
+    }
     const myClaim = claimsData.find(
       c => c.game_user_id === currentUser.gameId
     );
@@ -1530,7 +1558,10 @@ async function loadPlayerQuiz(gd) {
   quizSubmitted = false;
 
   document.getElementById('quizStatusBadge').textContent = `ACTIVE · ${totalQ} QUESTIONS`;
-
+    if (gd.ends_at) {
+      const badge = document.getElementById('quizStatusBadge');
+      startPlayerTimer(badge, gd.ends_at, () => loadPlayerView());
+    }
   // Show prize table + start button first
   showQuizPrizeTable(gd, totalQ);
 
@@ -1599,6 +1630,19 @@ function renderQuizQuestion() {
   const progress = Math.round((quizCurrent / totalQ) * 100);
   const body = document.getElementById('quizPlayerBody');
 
+  const imgHtml = q.image
+    ? `<div style="display:flex;justify-content:center;margin-bottom:16px;">
+        <div style="width:96px;height:96px;border-radius:5%;overflow:hidden;
+             border:1px solid rgba(191,95,255,0.6);
+             box-shadow:0 0 20px rgba(191,95,255,0.3);">
+          <img src="commanders/${q.image}.jpg"
+               alt="Commander"
+               style="width:100%;height:100%;object-fit:cover;display:block;"
+               onerror="this.parentElement.style.display='none'" />
+        </div>
+      </div>`
+    : '';
+
   body.innerHTML = `
     <div class="quiz-progress">
       <span style="font-size:9px;color:var(--purple);letter-spacing:2px;">QUESTION</span>
@@ -1610,6 +1654,7 @@ function renderQuizQuestion() {
       <span style="font-size:10px;color:var(--green);">✓ ${quizScore} pts</span>
     </div>
     <div class="quiz-q-card">
+      ${imgHtml}
       <div class="quiz-q-num">◈ QUESTION ${quizCurrent + 1} OF ${totalQ}</div>
       <div class="quiz-q-text">${q.question}</div>
       <div class="quiz-options" id="quizOptions">
@@ -2267,9 +2312,12 @@ function renderHistoryGiveaway(gd, claims) {
   constellations.forEach((cd, i) => {
     const pal = PALETTES[i % PALETTES.length];
     const claimers = claimsByConst[i] || [];
-    const winners = claimers.length > 0
-      ? claimers.map(c => `<span class="claim-tag" style="border-color:${pal.accent}44;color:${pal.accent};background:${pal.accent}10;">${c.username}</span>`).join(' ')
-      : '<span style="color:var(--text3);font-size:10px;">— unclaimed —</span>';
+const winners = claimers.length > 0
+  ? claimers.map(c => `<span class="claim-tag" style="border-color:${pal.accent}44;color:${pal.accent};background:${pal.accent}10;display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.4;padding:3px 8px;">
+      <span>${c.username}</span>
+      <span style="font-size:8px;opacity:.6;font-family:'Share Tech Mono',monospace;">${c.game_user_id}</span>
+    </span>`).join(' ')
+  : '<span style="color:var(--text3);font-size:10px;">— unclaimed —</span>';
     html += `<tr>
       <td style="color:${pal.accent};font-family:'Orbitron',monospace;">${i+1}</td>
       <td><span style="color:${pal.accent};">${cd.name}</span><br><span style="color:var(--text3);font-size:9px;">${cd.latin}</span></td>
@@ -2291,6 +2339,7 @@ function initHeaderStars(){const cv=document.getElementById('headerStars');const
 
 document.addEventListener('DOMContentLoaded', () => { initHeaderStars(); initSupabase(); });
 </script>
+
 <script src="memoryGame.js"></script>
 <script src="guessCommanders.js"></script>
 <script src="guessGame.js"></script>

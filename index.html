@@ -29,9 +29,23 @@
         <button class="login-tab" onclick="switchLoginTab('admin',event)">⬡ ADMIN ACCESS</button>
       </div>
       <div id="loginTabPlayer" class="login-body">
-        <div class="field"><label>GAME USERNAME</label><input id="playerName" type="text" placeholder="Enter your Open Galaxy username" /></div>
-        <div class="field"><label>GAME ID</label><input id="playerId" type="text" placeholder="Enter your game ID" /></div>
-        <div id="playerErr" class="login-err">⚠ Enter both username and Game ID.</div>
+<div class="field">
+  <label>GAME USERNAME</label>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <input id="playerName" type="text" placeholder="Enter your Open Galaxy username" style="flex:1;" />
+    <button onclick="document.getElementById('loginHelpModal').style.display='flex'"
+      style="width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.07);color:#00d4ff;font-size:13px;cursor:pointer;flex-shrink:0;">?</button>
+  </div>
+</div>
+<div class="field">
+  <label>GAME ID</label>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <input id="playerId" type="text" placeholder="Enter your game ID" style="flex:1;" />
+    <button onclick="document.getElementById('loginHelpModal').style.display='flex'"
+      style="width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.07);color:#00d4ff;font-size:13px;cursor:pointer;flex-shrink:0;">?</button>
+  </div>
+</div>
+		<div id="playerErr" class="login-err">⚠ Enter both username and Game ID.</div>
         <div class="btn-row"><button class="btn btn-cyan" onclick="loginPlayer()">→ ENTER GAME</button></div>
       </div>
       <div id="loginTabAdmin" class="login-body" style="display:none;">
@@ -547,7 +561,40 @@
 
 </div><!-- /mainApp -->
 </div><!-- /wrap -->
-
+<div id="loginHelpModal" onclick="if(event.target===this)this.style.display='none'"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#0c1219;border:1px solid rgba(0,212,255,0.3);border-radius:8px;padding:28px;max-width:400px;width:90%;box-shadow:0 0 40px rgba(0,212,255,0.1);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <span style="font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;color:#00d4ff;">HOW TO FIND YOUR DETAILS</span>
+      <button onclick="document.getElementById('loginHelpModal').style.display='none'"
+        style="background:none;border:none;color:#4a7090;font-size:20px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div style="border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:14px;margin-bottom:14px;display:flex;gap:14px;">
+      <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.4);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;color:#00d4ff;flex-shrink:0;">1</div>
+      <div>
+        <div style="font-size:13px;color:#d8e6f5;margin-bottom:4px;"><span style="color:#00d4ff;">Username</span> — your exact Open Galaxy in-game name.</div>
+        <div style="font-size:11px;color:#4a7090;line-height:1.6;">This is the name other players see on Ranking or you Planet.</div>
+      </div>
+    </div>
+    <div style="border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:14px;margin-bottom:14px;display:flex;gap:14px;">
+      <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.4);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;color:#00d4ff;flex-shrink:0;">2</div>
+      <div>
+        <div style="font-size:13px;color:#d8e6f5;margin-bottom:4px;"><span style="color:#00d4ff;">Game ID</span> — your unique numeric player ID.</div>
+        <div style="font-size:11px;color:#4a7090;line-height:1.6;">Social → Ranking → Your Name and ID <br>(e.g. 1234567 — not your username).</div>
+      </div>
+    </div>
+    <div style="border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:14px;margin-bottom:16px;display:flex;gap:14px;">
+      <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.4);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;color:#00d4ff;flex-shrink:0;">3</div>
+      <div>
+        <div style="font-size:13px;color:#d8e6f5;margin-bottom:4px;"><span style="color:#00d4ff;">Why it matters</span> — prizes are sent via your Game ID.</div>
+        <div style="font-size:11px;color:#4a7090;line-height:1.6;">Wrong ID = reward goes to the wrong account or gets lost.</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,149,0,0.08);border:1px solid rgba(255,149,0,0.25);border-radius:4px;padding:12px 14px;font-size:11px;color:#cc8800;line-height:1.7;">
+      ⚠ Use your <strong style="color:#ff9500;">real</strong> username and ID — not a nickname or alt account. Rewards are delivered in-game based on exactly what you enter here.
+    </div>
+  </div>
+</div>
 <script src="mcqdb.js"></script>
 <script src="gameTimer.js"></script>
 <script>
@@ -1335,26 +1382,59 @@ async function publishQuiz() {
 // CLEAR GAME
 // ══════════════════════════════════════════════════════
 async function clearGame() {
-stopGameTimer(); 
-const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId;
+  stopGameTimer();
+  const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId;
   if (!gid) return;
   if (!confirm('End this game? Players will see their results revealed.')) return;
+
   const { data: gameData } = await sb.from('constellation_games').select('data').eq('id', gid).single();
   const updatedData = { ...(gameData?.data || {}), active: false, revealed: true };
   await sb.from('constellation_games').update({ data: updatedData }).eq('id', gid);
-  document.getElementById('gameStatusRow').style.display = 'none';
-  document.getElementById('adminDashPanel').style.display = 'none';
-  document.getElementById('quizDashPanel').style.display = 'none';
-  document.getElementById('gameStatusChip').innerHTML = '<span class="status-chip status-inactive">ENDED</span>';
+
+  // Clean up channels
   if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel = null; }
-  if (quizChannel) { sb.removeChannel(quizChannel); quizChannel = null; }
-  activeGameId = null; activeQuizId = null;
-  document.getElementById('memoryDashPanel').style.display = 'none';  // ADD
-if (memoryChannel) { sb.removeChannel(memoryChannel); memoryChannel = null; }  // ADD
-activeMemoryId = null;  // ADD
-document.getElementById('guessDashPanel').style.display = 'none';
-if (guessChannel) { sb.removeChannel(guessChannel); guessChannel = null; }
-guessGameId = null;
+  if (quizChannel)     { sb.removeChannel(quizChannel);     quizChannel     = null; }
+  if (memoryChannel)   { sb.removeChannel(memoryChannel);   memoryChannel   = null; }
+  if (guessChannel)    { sb.removeChannel(guessChannel);    guessChannel    = null; }
+
+  // Reset all active game IDs
+  activeGameId   = null;
+  activeQuizId   = null;
+  activeMemoryId = null;
+  guessGameId    = null;
+
+  // Reset prizes/state
+  guessPrizes    = Array(GUESS_TOP_N).fill('');
+  guessConsolation = '';
+  guessSubmitted = false;
+
+  // Hide all game panels
+  document.getElementById('adminDashPanel').style.display  = 'none';
+  document.getElementById('quizDashPanel').style.display   = 'none';
+  document.getElementById('memoryDashPanel').style.display = 'none';
+  document.getElementById('guessDashPanel').style.display  = 'none';
+  document.getElementById('gameStatusRow').style.display   = 'none';
+  document.getElementById('gameStatusChip').innerHTML      = '<span class="status-chip status-inactive">ENDED</span>';
+
+  // Hide all setup panels so initAdminSetup starts clean
+  document.getElementById('giveawaySetup').style.display = 'none';
+  document.getElementById('quizSetup').style.display     = 'none';
+  document.getElementById('memorySetup').style.display   = 'none';
+  document.getElementById('guessSetup').style.display    = 'none';
+  document.getElementById('modeSelectedLabel').style.display = 'none';
+
+  // Deselect mode cards
+  document.getElementById('modeCardGiveaway').className = 'mode-card';
+  document.getElementById('modeCardQuiz').className     = 'mode-card';
+  document.getElementById('modeCardMemory').className   = 'mode-card';
+  document.getElementById('modeCardGuess').className    = 'mode-card';
+
+  currentMode = null;
+
+  // Refresh history then re-init the full admin panel
+  await loadHistory();
+  initAdminSetup();
+  await loadHistory();
 }
 
 // ══════════════════════════════════════════════════════

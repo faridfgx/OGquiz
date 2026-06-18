@@ -330,7 +330,6 @@ function buildGuessChoices() {
 function renderGuessCard(idx) {
   const body = document.getElementById('guessPlayerBody');
   if (idx >= guessCommanders.length) {
-    // All done — show review then submit
     renderGuessSummary();
     return;
   }
@@ -340,6 +339,7 @@ function renderGuessCard(idx) {
   const progress = Math.round((idx / total) * 100);
   const saved    = guessAnswers[idx] || {};
   const opts     = guessChoices[idx] || { nameOptions: [cmd.name], skillOptions: [cmd.skillName] };
+  const isFirst  = idx === 0;
 
   const imgSrc = guessImageUrl(cmd);
 
@@ -368,11 +368,16 @@ function renderGuessCard(idx) {
     <div class="guess-timer" id="guessTimerDisp">⏱ 00:00</div>
 
     <div class="guess-img-wrap">
-     <img src="${imgSrc}" alt="Commander" data-base="commanders/${cmd.image}" data-exts="jpg" onerror="guessImgFallback(this)">
+      <img src="${imgSrc}" alt="Commander" data-base="commanders/${cmd.image}" data-exts="jpg" onerror="guessImgFallback(this)">
       <div class="guess-counter">${idx + 1} / ${total}</div>
     </div>
 
-    <div style="display:flex;gap:18px;flex-direction:column;margin-bottom:4px;">
+    ${isFirst ? `
+    <div style="margin-bottom:12px;padding:10px 12px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:4px;font-size:11px;color:#4a9090;line-height:1.7;">
+      ◈ <strong style="color:#00d4ff;">Two parts to answer</strong> — pick the commander name <em>and</em> their ability. Both are required on this first question before you can continue. You can freely skip on all other questions.
+    </div>` : ''}
+
+    <div style="display:flex;flex-direction:column;gap:18px;margin-bottom:4px;">
       <div class="guess-field">
         <label>WHO IS THIS COMMANDER?</label>
         <div class="guess-options">${renderOptions(opts.nameOptions, 'name', saved.name)}</div>
@@ -383,16 +388,19 @@ function renderGuessCard(idx) {
       </div>
     </div>
 
+    ${isFirst ? `
+    <div id="firstQGate" style="display:none;margin-top:12px;padding:10px 12px;border-radius:4px;font-size:11px;line-height:1.6;background:rgba(255,149,0,0.08);border:1px solid rgba(255,149,0,0.3);color:#cc8800;text-align:center;"></div>
+    ` : ''}
+
     <div class="guess-nav">
       ${idx > 0 ? `<button class="btn btn-sm" style="color:var(--text2);border-color:var(--border2);" onclick="renderGuessCard(${idx-1})">← PREV</button>` : '<div></div>'}
-      <button class="btn btn-sm" style="color:var(--text2);border-color:var(--border2);margin-left:auto;" onclick="${idx < total - 1 ? `renderGuessCard(${idx+1})` : 'renderGuessSummary()'}">SKIP →</button>
+      <button class="btn btn-sm" style="color:var(--text2);border-color:var(--border2);margin-left:auto;" onclick="${isFirst ? 'tryFirstNext()' : (idx < total - 1 ? `renderGuessCard(${idx+1})` : 'renderGuessSummary()')}">SKIP →</button>
       ${idx < total - 1
-        ? `<button class="btn" style="border-color:rgba(255,165,0,0.4);color:#ffa500;" onclick="renderGuessCard(${idx+1})">NEXT →</button>`
-        : `<button class="btn" style="border-color:rgba(57,255,20,0.5);color:var(--green);" onclick="renderGuessSummary()">✓ REVIEW & SUBMIT</button>`
+        ? `<button class="btn" style="border-color:rgba(255,165,0,0.4);color:#ffa500;" onclick="${isFirst ? 'tryFirstNext()' : `renderGuessCard(${idx+1})`}">NEXT →</button>`
+        : `<button class="btn" style="border-color:rgba(57,255,20,0.5);color:var(--green);" onclick="${isFirst ? 'tryFirstNext()' : 'renderGuessSummary()'}">✓ REVIEW & SUBMIT</button>`
       }
     </div>`;
 
-  // Start/continue live timer
   startGuessTimerDisplay();
 }
 
@@ -409,18 +417,27 @@ function guessImgFallback(img) {
   img.src = img.dataset.base + '.' + next;
 }
 
-// ── Choice selection — saved immediately, then card re-renders ─────────
 function chooseGuessName(idx, optIdx) {
   const opt = guessChoices[idx]?.nameOptions[optIdx];
   guessAnswers[idx] = Object.assign({}, guessAnswers[idx], { name: opt });
   renderGuessCard(idx);
+  if (idx === 0) updateFirstQGate();
 }
+
 function chooseGuessSkill(idx, optIdx) {
   const opt = guessChoices[idx]?.skillOptions[optIdx];
   guessAnswers[idx] = Object.assign({}, guessAnswers[idx], { skill: opt });
   renderGuessCard(idx);
+  if (idx === 0) updateFirstQGate();
 }
-
+function updateFirstQGate() {
+  const ans  = guessAnswers[0] || {};
+  const gate = document.getElementById('firstQGate');
+  if (!gate) return;
+  if (ans.name && ans.skill) {
+    gate.style.display = 'none';
+  }
+}
 // ── Live Timer ──────────────────────────────────────────────────────────
 function startGuessTimerDisplay() {
   if (guessTimerHandle) clearInterval(guessTimerHandle);
@@ -700,4 +717,22 @@ function guessSound(type) {
       });
     }
   } catch(e) {}
+}
+function tryFirstNext() {
+  const ans  = guessAnswers[0] || {};
+  const gate = document.getElementById('firstQGate');
+  if (!ans.name || !ans.skill) {
+    if (gate) {
+      const missing = (!ans.name && !ans.skill)
+        ? 'both the commander name (Part 1) and the ability (Part 2)'
+        : !ans.name
+        ? 'the commander name (Part 1)'
+        : 'the special ability (Part 2)';
+      gate.style.display = 'block';
+      gate.textContent = '⚠ You still need to answer ' + missing + ' before continuing. This is only required for the first question.';
+    }
+    return;
+  }
+  if (gate) gate.style.display = 'none';
+  renderGuessCard(1);
 }

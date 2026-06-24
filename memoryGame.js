@@ -136,19 +136,26 @@ function subscribeToMemoryAdmin() {
 // PLAYER — Load
 // ════════════════════════════════════════════════════════
 async function loadPlayerMemory(gd) {
-  // Already submitted?
   const { data: existing } = await sb
     .from('constellation_claims')
     .select('*')
     .eq('game_id', activeMemoryId)
-    .eq('game_user_id', currentUser.gameId);
+    .eq('game_user_id', currentUser.gameId)
+    .single();
 
-  if (existing && existing.length) {
-    showMemoryResults(existing[0], gd);
+  if (existing?.score > 0 || existing?.time_taken) {
+    showMemoryResults(existing, gd);
     return;
   }
 
-document.getElementById('memoryStatusBadge').textContent = 'ACTIVE · 5×5 GRID';
+  // ── NEW: use a fresh shuffle seed every session ──
+  // Keep the same 12 commander pairs (from game seed), but
+  // reshuffle their positions on every load
+  const sessionSeed = Date.now() % 999983;
+  const baseDeck = buildMemoryDeck(gd.seed);       // same 12 pairs + 1 wild
+  gd.deck = memShuffle(baseDeck, sessionSeed);      // new positions every time
+
+  document.getElementById('memoryStatusBadge').textContent = 'ACTIVE · 5×5 GRID';
     if (gd.ends_at) {
       const badge = document.getElementById('memoryStatusBadge');
       startPlayerTimer(badge, gd.ends_at, () => loadPlayerView());

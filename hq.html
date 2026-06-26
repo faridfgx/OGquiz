@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commander HQ</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #070b0f;
+  --bg2: #0c1219;
+  --bg3: #101820;
+  --border: #1c3444;
+  --border2: #0e2030;
+  --accent: #00d4ff;
+  --accent2: #ff6b35;
+  --accent3: #39ff14;
+  --purple: #bf5fff;
+  --text: #ccdde8;
+  --text2: #5a8096;
+  --danger: #ff3344;
+  --gold: #ffd700;
+  --glow: 0 0 14px rgba(0,212,255,0.45);
+  --glow2: 0 0 14px rgba(255,107,53,0.45);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:16px;}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,212,255,0.025) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(0,212,255,0.015) 40px);pointer-events:none;z-index:0;}
+.scanline{position:fixed;inset:0;background:repeating-linear-gradient(to bottom,transparent 0,transparent 3px,rgba(0,0,0,0.1) 3px,rgba(0,0,0,0.1) 4px);pointer-events:none;z-index:1;}
+.wrap{max-width:1300px;margin:0 auto;padding:24px;position:relative;z-index:2;}
+
+/* ── GLOBAL COMPONENTS ── */
+.panel{background:var(--bg2);border:1px solid var(--border);border-radius:3px;overflow:hidden;position:relative;margin-bottom:22px;}
+.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+.panel.admin-panel::before{background:linear-gradient(90deg,transparent,var(--accent2),transparent);}
+.panel-hd{background:var(--bg3);border-bottom:1px solid var(--border2);padding:13px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.ph-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:var(--glow);animation:blink 2s ease-in-out infinite;flex-shrink:0;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+.ph-title{font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;}
+.panel-body{padding:20px;}
+
+.btn{font-family:'Orbitron',monospace;font-size:12px;letter-spacing:2px;font-weight:700;padding:13px 26px;border:1px solid;border-radius:3px;cursor:pointer;transition:all .15s;text-transform:uppercase;position:relative;overflow:hidden;white-space:nowrap;background:transparent;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-cyan{color:var(--accent);border-color:var(--accent);}
+.btn-cyan:hover:not(:disabled){box-shadow:var(--glow);background:rgba(0,212,255,0.06);}
+.btn-red{color:var(--danger);border-color:var(--danger);}
+.btn-red:hover:not(:disabled){box-shadow:0 0 14px rgba(255,51,68,0.4);}
+.btn-gold{color:var(--gold);border-color:var(--gold);}
+.btn-gold:hover:not(:disabled){box-shadow:0 0 14px rgba(255,215,0,0.4);}
+.btn-green{color:var(--accent3);border-color:var(--accent3);}
+.btn-green:hover:not(:disabled){box-shadow:0 0 14px rgba(57,255,20,0.4);}
+.btn-purple{color:var(--purple);border-color:var(--purple);}
+.btn-purple:hover:not(:disabled){box-shadow:0 0 14px rgba(191,95,255,0.4);}
+.btn-orange{color:var(--accent2);border-color:var(--accent2);}
+.btn-orange:hover:not(:disabled){box-shadow:var(--glow2);}
+.btn-sm{padding:8px 16px;font-size:11px;}
+.btn-xs{padding:5px 10px;font-size:10px;}
+.btn-row{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap;align-items:center;}
+
+.field-group{margin-bottom:16px;}
+.field-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:6px;display:block;}
+.field-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s;}
+.field-input:focus{border-color:var(--accent);}
+.field-input::placeholder{color:var(--text2);opacity:.4;}
+.field-error{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--danger);margin-top:5px;padding:6px 10px;background:rgba(255,51,68,0.07);border:1px solid rgba(255,51,68,0.25);border-radius:2px;display:none;}
+.field-error.show{display:block;}
+.field-info{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-top:5px;opacity:.7;}
+
+.badge{display:inline-flex;align-items:center;justify-content:center;background:var(--accent);color:var(--bg);font-family:'Orbitron',monospace;font-size:10px;font-weight:900;padding:2px 8px;border-radius:20px;min-width:24px;}
+.badge-orange{background:var(--accent2);}
+.badge-green{background:var(--accent3);color:#000;}
+.badge-red{background:var(--danger);}
+.badge-gold{background:var(--gold);color:#000;}
+
+.tag{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:2px;}
+.tag-pending{color:var(--gold);background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);}
+.tag-applied{color:var(--accent3);background:rgba(57,255,20,0.1);border:1px solid rgba(57,255,20,0.3);}
+.tag-changed{color:var(--accent2);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);}
+.tag-new{color:var(--accent);background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);}
+
+/* ── SCREEN MANAGEMENT ── */
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* ═══════════════════════════════════════════
+   LOGIN SCREEN
+═══════════════════════════════════════════ */
+#loginScreen .wrap{max-width:440px;}
+.login-header{text-align:center;padding:0 0 32px;}
+.login-header::before{content:'▶ SECURE ACCESS TERMINAL ◀';display:block;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:4px;margin-bottom:14px;}
+.login-title{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;color:var(--accent);text-shadow:var(--glow);letter-spacing:3px;}
+.login-title span{color:var(--accent2);}
+.login-sub{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);margin-top:8px;letter-spacing:2px;}
+.login-step-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--purple);letter-spacing:2px;margin-bottom:18px;padding:5px 10px;background:rgba(191,95,255,0.07);border:1px solid rgba(191,95,255,0.2);border-radius:2px;display:inline-block;}
+
+/* ═══════════════════════════════════════════
+   PLAYER APP SCREEN
+═══════════════════════════════════════════ */
+header.player-header{text-align:center;padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:30px;}
+header.player-header::before{content:'▶ TACTICAL COMMAND INTERFACE ◀';display:block;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);letter-spacing:4px;margin-bottom:10px;}
+h1{font-family:'Orbitron',monospace;font-size:clamp(22px,4vw,36px);font-weight:900;color:var(--accent);text-shadow:var(--glow);letter-spacing:3px;}
+h1 span{color:var(--accent2);}
+.subtitle{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text2);margin-top:8px;letter-spacing:2px;}
+.user-bar{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap;}
+.user-chip{font-family:'Share Tech Mono',monospace;font-size:11px;padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:2px;color:var(--text2);}
+.user-chip span{color:var(--accent);}
+
+.tab-bar{display:flex;border-bottom:1px solid var(--border2);margin-bottom:22px;}
+.tab{padding:11px 18px;font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;background:transparent;border-top:none;border-left:none;border-right:none;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;padding:14px;resize:vertical;min-height:120px;outline:none;transition:border-color .2s;line-height:1.7;}
+textarea:focus{border-color:var(--accent);}
+textarea::placeholder{color:var(--text2);opacity:.5;}
+.search-box{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:14px;padding:11px 16px;outline:none;margin-bottom:12px;transition:border-color .2s;}
+.search-box:focus{border-color:var(--accent);}
+.search-box::placeholder{color:var(--text2);opacity:.5;}
+
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+.toolbar-label{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);}
+.toolbar-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.preset-zone{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:14px 16px;margin-bottom:14px;}
+.preset-title{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;}
+.preset-btns{display:flex;gap:8px;flex-wrap:wrap;}
+.preset-note{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-top:8px;opacity:.6;}
+.fmt-badge{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:3px 9px;border-radius:2px;display:inline-block;}
+.fmt-old{color:var(--accent2);background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);}
+.fmt-new{color:var(--purple);background:rgba(191,95,255,0.1);border:1px solid rgba(191,95,255,0.3);}
+.restored-notice{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.2);border-radius:3px;padding:10px 14px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.restored-notice span{color:var(--text2);}
+
+.cmd-card{background:var(--bg);border:1px solid var(--border2);border-radius:3px;margin-bottom:8px;overflow:hidden;transition:border-color .2s;}
+.cmd-card:hover{border-color:var(--border);}
+.cmd-card.active{border-color:var(--accent);background:rgba(0,212,255,0.02);}
+.cmd-card.active::before{content:'';display:block;height:2px;background:linear-gradient(90deg,var(--accent),transparent);}
+.cmd-card.has-pending{border-color:rgba(255,215,0,0.3);}
+.cmd-card.has-applied{border-color:rgba(57,255,20,0.2);}
+.cc-head{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;user-select:none;}
+.cc-check{width:20px;height:20px;border:2px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;}
+.cmd-card.active .cc-check{background:var(--accent);border-color:var(--accent);box-shadow:var(--glow);}
+.cc-tick{display:none;color:var(--bg);font-size:12px;font-weight:900;line-height:1;}
+.cmd-card.active .cc-tick{display:block;}
+.cc-img{width:44px;height:44px;border-radius:3px;object-fit:cover;flex-shrink:0;border:1px solid var(--border2);background:var(--bg3);}
+.cc-img-placeholder{width:44px;height:44px;border-radius:3px;flex-shrink:0;border:1px solid var(--border2);background:var(--bg3);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:10px;color:var(--text2);}
+.cc-id{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);min-width:38px;}
+.cc-name{font-size:15px;font-weight:700;color:var(--text);flex:1;line-height:1.2;}
+.cmd-card.active .cc-name{color:var(--accent);}
+.cc-skill{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);opacity:.7;line-height:1;}
+.cc-name-block{flex:1;display:flex;flex-direction:column;gap:1px;}
+.cc-var{font-family:'Share Tech Mono',monospace;font-size:11px;padding:2px 7px;border-radius:3px;flex-shrink:0;}
+.vp{color:var(--accent3);background:rgba(57,255,20,0.08);border:1px solid rgba(57,255,20,0.2);}
+.vn{color:var(--danger);background:rgba(255,51,68,0.08);border:1px solid rgba(255,51,68,0.2);}
+.vz{color:var(--text2);background:rgba(90,128,150,0.08);border:1px solid rgba(90,128,150,0.2);}
+.cc-stat-summary{display:flex;gap:5px;flex-shrink:0;}
+.css-chip{font-family:'Share Tech Mono',monospace;font-size:10px;padding:2px 6px;border-radius:2px;border:1px solid var(--border2);color:var(--text2);transition:all .15s;}
+.css-chip.active-acc{color:#00d4ff;border-color:rgba(0,212,255,0.5);background:rgba(0,212,255,0.1);}
+.css-chip.active-spd{color:#39ff14;border-color:rgba(57,255,20,0.5);background:rgba(57,255,20,0.1);}
+.css-chip.active-dod{color:#ff6b35;border-color:rgba(255,107,53,0.5);background:rgba(255,107,53,0.1);}
+.css-chip.active-ele{color:#bf5fff;border-color:rgba(191,95,255,0.5);background:rgba(191,95,255,0.1);}
+.cc-arrow{font-size:10px;color:var(--text2);transition:transform .2s;flex-shrink:0;}
+.cmd-card.expanded .cc-arrow{transform:rotate(180deg);}
+.cc-body{border-top:1px solid var(--border2);display:none;animation:expandIn .15s ease;}
+.cmd-card.expanded .cc-body{display:flex;}
+@keyframes expandIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.cc-body-left{width:90px;flex-shrink:0;border-right:1px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:12px 8px;gap:8px;background:rgba(0,0,0,0.2);}
+.cc-body-img{width:72px;height:72px;border-radius:3px;object-fit:cover;border:1px solid var(--border);background:var(--bg3);}
+.cc-body-img-placeholder{width:72px;height:72px;border-radius:3px;border:1px solid var(--border);background:var(--bg3);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:'Orbitron',monospace;font-size:8px;color:var(--text2);text-align:center;}
+.cc-body-id{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);}
+.cc-ability{font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 6px;border-radius:2px;letter-spacing:1px;text-transform:uppercase;text-align:center;}
+.ab-acc{color:#00d4ff;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);}
+.ab-dod{color:#ff6b35;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);}
+.ab-spd{color:#39ff14;background:rgba(57,255,20,0.1);border:1px solid rgba(57,255,20,0.25);}
+.ab-ele{color:#bf5fff;background:rgba(191,95,255,0.1);border:1px solid rgba(191,95,255,0.25);}
+.ab-multi{color:#ffd700;background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.25);}
+.ab-none{color:var(--text2);background:rgba(90,128,150,0.08);border:1px solid rgba(90,128,150,0.2);}
+.cc-req-badge{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:2px;flex-shrink:0;}
+.req-badge-pending{color:var(--gold);background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);}
+.req-badge-applied{color:var(--accent3);background:rgba(57,255,20,0.1);border:1px solid rgba(57,255,20,0.3);}
+.cc-body-right{flex:1;padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.sg-cell{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:7px 9px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;}
+.sg-cell::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--sc, var(--accent));transform:scaleX(0);transition:transform .2s;}
+.sg-cell.mode-click.lit::after{transform:scaleX(1);}
+.sg-cell.mode-click.lit{border-color:var(--sc, var(--accent));background:rgba(0,0,0,0.1);}
+.sg-cell:hover{border-color:var(--sc, var(--accent));}
+.sg-cell.is-ability{box-shadow:inset 0 0 0 1px rgba(255,215,0,0.15);}
+.sg-icon{font-size:16px;flex-shrink:0;line-height:1;}
+.sg-label-block{flex:1;min-width:0;}
+.sg-label{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:1px;color:var(--text2);text-transform:uppercase;transition:color .15s;white-space:nowrap;}
+.sg-cell.mode-click.lit .sg-label{color:var(--sc, var(--accent));}
+.sg-sub{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--text2);opacity:.5;margin-top:1px;}
+.sg-val{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--text2);transition:color .15s;min-width:14px;text-align:center;}
+.sg-cell.mode-click.lit .sg-val{color:var(--sc, var(--accent));}
+.sg-spinner{display:none;align-items:center;gap:4px;}
+.sg-cell.mode-manual .sg-spinner{display:flex;}
+.sg-cell.mode-click .sg-val-wrap{display:flex;}
+.sg-cell.mode-manual .sg-val-wrap{display:none;}
+.spin-btn{background:transparent;border:1px solid var(--border);border-radius:2px;color:var(--text2);cursor:pointer;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:11px;line-height:1;transition:all .15s;flex-shrink:0;padding:0;}
+.spin-btn:hover{border-color:var(--sc, var(--accent));color:var(--sc, var(--accent));}
+.spin-input{background:var(--bg);border:1px solid var(--border);border-radius:2px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;width:36px;text-align:center;padding:2px 3px;outline:none;-moz-appearance:textfield;}
+.spin-input::-webkit-inner-spin-button,.spin-input::-webkit-outer-spin-button{-webkit-appearance:none;}
+.spin-input:focus{border-color:var(--sc, var(--accent));}
+.sg-acc{--sc:#00d4ff;}.sg-spd{--sc:#39ff14;}.sg-dod{--sc:#ff6b35;}.sg-ele{--sc:#bf5fff;}
+.mode-toggle-row{display:flex;align-items:center;gap:8px;}
+.mode-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text2);letter-spacing:1px;}
+.mode-toggle-btns{display:flex;gap:4px;}
+.mtb{font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 8px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s;}
+.mtb.active-mode{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.08);}
+.cc-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.cc-stat-info{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);padding:5px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:3px;}
+.cc-stat-info span{color:var(--accent);}
+.warn-msg{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2);padding:7px 12px;border:1px solid rgba(255,107,53,0.3);border-radius:3px;background:rgba(255,107,53,0.06);margin-top:6px;display:none;}
+.parse-status{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text2);}
+.out-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent;}
+.out-list::-webkit-scrollbar{width:4px;}
+.out-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.out-entry{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border2);border-radius:3px;padding:10px 14px;animation:slideIn .2s ease;transition:background .25s,border-color .25s;}
+.out-entry:hover{border-color:var(--border);}
+.out-entry.was-copied{background:rgba(255,215,0,0.07);border-color:rgba(255,215,0,0.35);}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:translateX(0);}}
+.out-tag{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:3px 8px;border-radius:2px;flex-shrink:0;}
+.tag-set{color:var(--accent);background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);}
+.out-cmd{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text);flex:1;word-break:break-all;}
+.out-name{font-size:13px;color:var(--text2);flex-shrink:0;}
+.copy-btn{background:transparent;border:1px solid var(--border);border-radius:2px;color:var(--text2);cursor:pointer;padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:10px;transition:all .15s;flex-shrink:0;}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent);}
+.copy-btn.ok{border-color:var(--accent3);color:var(--accent3);}
+.empty-state{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--text2);text-align:center;padding:36px;opacity:.45;}
+.out-header-actions{display:flex;gap:10px;align-items:center;margin-left:auto;}
+.req-zone{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:16px;margin-top:16px;}
+.req-entry{background:var(--bg);border:1px solid var(--border2);border-radius:3px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+.req-cmd{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text);flex:1;}
+.req-name{font-size:13px;color:var(--text2);}
+.req-meta{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-left:auto;}
+
+/* ═══════════════════════════════════════════
+   ADMIN APP SCREEN
+═══════════════════════════════════════════ */
+header.admin-header{text-align:center;padding:28px 0 22px;border-bottom:1px solid var(--border);margin-bottom:28px;}
+header.admin-header::before{content:'▶ ADMIN COMMAND TERMINAL ◀';display:block;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2);letter-spacing:4px;margin-bottom:10px;opacity:.7;}
+header.admin-header h1{color:var(--accent2);text-shadow:var(--glow2);}
+header.admin-header h1 span{color:var(--accent);}
+.admin-user-chip{border-color:rgba(255,107,53,0.3) !important;color:var(--accent2) !important;}
+.admin-user-chip span{color:var(--text) !important;}
+
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.stat-tile{background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s;}
+.stat-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-tile.t-pending::before{background:var(--gold);}
+.stat-tile.t-applied::before{background:var(--accent3);}
+.stat-tile.t-players::before{background:var(--accent);}
+.stat-tile.t-changed::before{background:var(--accent2);}
+.stat-tile:hover{border-color:var(--border);}
+.st-val{font-family:'Orbitron',monospace;font-size:28px;font-weight:900;line-height:1;}
+.t-pending .st-val{color:var(--gold);}
+.t-applied .st-val{color:var(--accent3);}
+.t-players .st-val{color:var(--accent);}
+.t-changed .st-val{color:var(--accent2);}
+.st-label{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--text2);margin-top:5px;text-transform:uppercase;}
+
+.filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+.filter-btn{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:6px 14px;border-radius:2px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.filter-btn:hover{border-color:var(--border);color:var(--text);}
+.filter-btn.active-f{border-color:var(--accent2);color:var(--accent2);background:rgba(255,107,53,0.07);}
+.filter-btn.active-f-pending{border-color:var(--gold);color:var(--gold);background:rgba(255,215,0,0.07);}
+.filter-btn.active-f-applied{border-color:var(--accent3);color:var(--accent3);background:rgba(57,255,20,0.07);}
+.admin-search-box{background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:13px;padding:8px 14px;outline:none;margin-left:auto;min-width:200px;transition:border-color .2s;}
+.admin-search-box:focus{border-color:var(--accent2);}
+.admin-search-box::placeholder{color:var(--text2);opacity:.5;}
+
+.player-group{background:var(--bg);border:1px solid var(--border2);border-radius:3px;margin-bottom:10px;overflow:hidden;transition:border-color .2s;}
+.player-group:hover{border-color:var(--border);}
+.player-group.has-pending{border-color:rgba(255,215,0,0.25);}
+.pg-header{display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;background:var(--bg3);user-select:none;flex-wrap:wrap;}
+.pg-header:hover{background:rgba(255,107,53,0.03);}
+.pg-player-id{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--accent2);}
+.pg-player-label{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2);}
+.pg-arrow{font-size:10px;color:var(--text2);transition:transform .2s;margin-left:auto;}
+.player-group.expanded .pg-arrow{transform:rotate(180deg);}
+.pg-body{display:none;border-top:1px solid var(--border2);}
+.player-group.expanded .pg-body{display:block;}
+
+.req-row{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border2);transition:background .15s;flex-wrap:wrap;}
+.req-row:last-child{border-bottom:none;}
+.req-row:hover{background:rgba(255,255,255,0.015);}
+.req-row.is-applied{opacity:.55;}
+.req-row.is-applied:hover{opacity:.75;}
+.req-row.is-changed{background:rgba(255,107,53,0.03);}
+.req-left{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;}
+.req-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.req-commander-name{font-size:15px;font-weight:700;color:var(--text);}
+.req-cmd-text{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--accent);word-break:break-all;line-height:1.5;}
+.req-meta-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.req-meta-text{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);}
+.req-diff{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;}
+.diff-old{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--danger);text-decoration:line-through;opacity:.7;}
+.diff-arrow{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);}
+.diff-new{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--accent3);}
+.diff-item{display:flex;align-items:center;gap:4px;}
+.req-actions{display:flex;gap:6px;align-items:flex-start;flex-shrink:0;padding-top:2px;}
+.copy-cmd-btn{background:transparent;border:1px solid var(--border);border-radius:2px;color:var(--text2);cursor:pointer;padding:4px 10px;font-family:'Share Tech Mono',monospace;font-size:10px;transition:all .15s;white-space:nowrap;}
+.copy-cmd-btn:hover{border-color:var(--accent);color:var(--accent);}
+.copy-cmd-btn.ok{border-color:var(--accent3);color:var(--accent3);}
+.req-row.was-copied{background:rgba(191,95,255,0.07);border-left:3px solid var(--purple);}
+
+@keyframes newRowPulse{0%{background:rgba(0,212,255,0.12);}100%{background:transparent;}}
+.req-row.is-new-arrival{animation:newRowPulse 2.5s ease-out forwards;}
+
+.sync-chip{font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 10px;border-radius:2px;border:1px solid var(--border2);color:var(--text2);display:flex;align-items:center;gap:6px;transition:border-color .3s,color .3s;}
+.sync-chip.syncing{border-color:rgba(0,212,255,0.4);color:var(--accent);}
+.sync-chip.new-data{border-color:rgba(57,255,20,0.4);color:var(--accent3);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--text2);transition:background .3s;}
+.sync-chip.syncing .sync-dot{background:var(--accent);animation:blink .6s ease-in-out infinite;}
+.sync-chip.new-data .sync-dot{background:var(--accent3);}
+
+.new-arrival-banner{display:none;align-items:center;gap:10px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.25);border-radius:3px;padding:9px 14px;margin-bottom:12px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent);}
+.new-arrival-banner.visible{display:flex;}
+.new-arrival-banner button{margin-left:auto;background:transparent;border:1px solid rgba(0,212,255,0.3);border-radius:2px;color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:10px;padding:3px 10px;cursor:pointer;}
+.new-arrival-banner button:hover{background:rgba(0,212,255,0.08);}
+
+.bulk-bar{background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:3px;padding:10px 16px;display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+.bulk-bar-text{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent3);}
+.sort-label{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);letter-spacing:1px;padding:6px 14px;border:1px solid var(--border2);border-radius:2px;}
+
+/* ── SHARED UTILS ── */
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);display:inline-block;margin-left:4px;animation:blink 1.5s ease-in-out infinite;}
+.loading-overlay{position:fixed;inset:0;background:rgba(7,11,15,0.92);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:16px;}
+.loading-overlay.hidden{display:none;}
+.loader-ring{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loader-text{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text2);letter-spacing:2px;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:10px 20px;font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--text);z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;}
+.toast.show{opacity:1;}
+.toast.success{border-color:rgba(57,255,20,0.4);color:var(--accent3);}
+.toast.error{border-color:rgba(255,51,68,0.4);color:var(--danger);}
+
+@media(max-width:700px){
+  .stats-bar{grid-template-columns:1fr 1fr;}
+  .filter-bar{flex-direction:column;align-items:stretch;}
+  .admin-search-box{margin-left:0;min-width:unset;}
+  .req-actions{width:100%;}
+  .cc-body{flex-direction:column;}
+  .cc-body-left{width:100%;flex-direction:row;justify-content:flex-start;border-right:none;border-bottom:1px solid var(--border2);}
+  .out-name{display:none;}
+}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text" id="loaderText">INITIALIZING...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN SCREEN
+═══════════════════════════════════════════ -->
+<div id="loginScreen" class="screen">
+<div class="wrap">
+  <div class="login-header">
+    <div class="login-title">COMMANDER <span>HQ</span></div>
+    <div class="login-sub">// SECURE ACCESS REQUIRED</div>
+  </div>
+  <div class="panel">
+    <div class="panel-hd">
+      <div class="ph-dot"></div>
+      <div class="ph-title">IDENTITY VERIFICATION</div>
+    </div>
+    <div class="panel-body">
+      <div id="loginStep1">
+        <div class="login-step-label">STEP 1 — ENTER YOUR GAME ID</div>
+        <div class="field-group">
+          <label class="field-label">Game ID (your in-game player ID)</label>
+          <input class="field-input" id="loginGameId" type="text" placeholder="e.g. 1337" autocomplete="off">
+          <div class="field-error" id="err-gameId"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-cyan" onclick="checkGameId()">▶ CONTINUE</button>
+        </div>
+      </div>
+      <div id="loginStep2" style="display:none">
+        <div class="login-step-label" id="step2Label">STEP 2 — ENTER PASSWORD</div>
+        <div class="field-group">
+          <label class="field-label" id="pwLabel">Password</label>
+          <input class="field-input" id="loginPassword" type="password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="field-error" id="err-pw"></div>
+          <div class="field-info" id="pwInfo"></div>
+        </div>
+        <div class="field-group" id="confirmPwGroup" style="display:none">
+          <label class="field-label">Confirm Password</label>
+          <input class="field-input" id="loginPasswordConfirm" type="password" placeholder="Confirm password" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="field-error" id="err-pw2"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-cyan" id="loginBtn" onclick="doLogin()">🔐 LOGIN</button>
+          <button class="btn btn-red btn-sm" onclick="resetStep()">← BACK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     PLAYER APP SCREEN
+═══════════════════════════════════════════ -->
+<div id="playerScreen" class="screen">
+<div class="wrap">
+<header class="player-header">
+  <h1>COMMANDER <span>STATS</span> GENERATOR</h1>
+  <div class="subtitle">// PASTE · CONFIGURE · REQUEST RESET</div>
+  <div class="user-bar">
+    <div class="user-chip">PLAYER ID: <span id="displayGameId">—</span></div>
+    <button class="btn btn-red btn-sm" onclick="doLogout()">⏻ LOGOUT</button>
+  </div>
+</header>
+
+<div class="tab-bar">
+  <button class="tab active" id="tab-tool" onclick="switchPlayerTab('tool')">⚡ STATS TOOL</button>
+  <button class="tab" id="tab-requests" onclick="switchPlayerTab('requests')">📋 MY REQUESTS</button>
+</div>
+
+<!-- TAB: STATS TOOL -->
+<div id="tabContent-tool">
+  <div class="panel">
+    <div class="panel-hd"><div class="ph-dot"></div><div class="ph-title">BULLETIN INPUT</div></div>
+    <div class="panel-body">
+      <textarea id="bulletinInput" placeholder="Paste bulletin data here — either format works:
+
+Old format:  [Bulletin]: 1337: Eva (Variance: -1)
+New format:  [Bulletin]:   [1337] Eva — variance: -1"></textarea>
+      <div class="btn-row">
+        <button class="btn btn-cyan" onclick="parseBulletin()">⚡ PARSE BULLETIN</button>
+        <button class="btn btn-red btn-sm" onclick="clearAll()">✕ CLEAR</button>
+        <span id="parseStatus" class="parse-status"></span>
+        <span id="fmtBadge" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="cmdPanel" style="display:none">
+    <div class="panel-hd">
+      <div class="ph-dot" style="background:var(--accent2);box-shadow:var(--glow2)"></div>
+      <div class="ph-title">COMMANDERS</div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <span class="parse-status" id="configCount"></span>
+        <span id="selBadge" class="badge badge-orange">0</span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div id="restoredNotice" style="display:none"></div>
+      <input class="search-box" id="searchBox" type="text" placeholder="🔍  Search by name or ID..." oninput="filterCards()">
+      <div class="preset-zone">
+        <div class="preset-title">⚡ BULK STAT PRESETS — applies to all selected commanders</div>
+        <div class="preset-btns">
+          <button class="btn btn-cyan btn-sm" onclick="applyPreset('spd_acc')">SPD + ACC (all)</button>
+          <button class="btn btn-gold btn-sm" onclick="applyPreset('ability_smart')">ABILITY STAT (smart)</button>
+        </div>
+        <div class="preset-note">SPD+ACC → Speed=5 + Accuracy=5 · ABILITY SMART → pairs ability stat with Speed/Accuracy</div>
+      </div>
+      <div class="toolbar">
+        <span class="toolbar-label">QUICK SELECT</span>
+        <div class="toolbar-btns">
+          <button class="btn btn-cyan btn-sm" onclick="selectAll()">SELECT ALL</button>
+          <button class="btn btn-red btn-sm" onclick="deselectAll()">DESELECT ALL</button>
+          <button class="btn btn-gold btn-sm" onclick="collapseAll()">COLLAPSE ALL</button>
+        </div>
+      </div>
+      <div id="cardList"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="genPanel" style="display:none">
+    <div class="panel-hd">
+      <div class="ph-dot" style="background:var(--purple);box-shadow:0 0 14px rgba(191,95,255,0.45)"></div>
+      <div class="ph-title">GENERATE & REQUEST RESET</div>
+    </div>
+    <div class="panel-body">
+      <p style="font-size:15px;color:var(--text2);margin-bottom:14px;">Generate commands and save a reset request — Admin will apply them in-game.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-cyan" onclick="generateAll()">⚡ GENERATE</button>
+        <button class="btn btn-gold" onclick="saveResetRequest()" id="saveReqBtn" style="display:none">💾 SAVE RESET REQUEST</button>
+      </div>
+      <div id="genWarn" class="warn-msg"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="outPanel" style="display:none">
+    <div class="panel-hd">
+      <div class="ph-dot" style="background:var(--accent3);box-shadow:0 0 14px rgba(57,255,20,0.45)"></div>
+      <div class="ph-title">GENERATED COMMANDS</div>
+      <div class="out-header-actions">
+        <span id="outBadge" class="badge badge-green">0</span>
+        <button class="btn btn-green btn-sm" onclick="copyAll()">📋 COPY ALL</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="out-list" id="outList"><div class="empty-state">// AWAITING COMMAND GENERATION</div></div>
+    </div>
+  </div>
+</div><!-- end tab-tool -->
+
+<!-- TAB: MY REQUESTS -->
+<div id="tabContent-requests" style="display:none">
+  <div class="panel">
+    <div class="panel-hd">
+      <div class="ph-dot" style="background:var(--gold);box-shadow:0 0 14px rgba(255,215,0,0.45)"></div>
+      <div class="ph-title">MY RESET REQUESTS</div>
+      <div style="margin-left:auto">
+        <button class="btn btn-cyan btn-sm" onclick="loadMyRequests()">↺ REFRESH</button>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div id="myRequestsList"><div class="empty-state">// NO REQUESTS YET</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- .wrap -->
+</div><!-- #playerScreen -->
+
+<!-- ═══════════════════════════════════════════
+     ADMIN APP SCREEN
+═══════════════════════════════════════════ -->
+<div id="adminScreen" class="screen">
+<div class="wrap">
+
+<header class="admin-header">
+  <h1>COMMANDER <span>ADMIN</span> PANEL</h1>
+  <div class="user-bar">
+    <div class="user-chip admin-user-chip">⚙ ADMIN: <span id="adminDisplayId">—</span></div>
+    <div class="sync-chip" id="syncChip">
+      <div class="sync-dot"></div>
+      <span id="syncLabel">SYNC IDLE</span>
+    </div>
+    <button class="btn btn-red btn-sm" onclick="doLogout()">⏻ LOGOUT</button>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-tile t-pending"><div class="st-val" id="tile-pending">—</div><div class="st-label">Pending</div></div>
+  <div class="stat-tile t-changed"><div class="st-val" id="tile-changed">—</div><div class="st-label">Edited / Changed</div></div>
+  <div class="stat-tile t-players"><div class="st-val" id="tile-players">—</div><div class="st-label">Players</div></div>
+  <div class="stat-tile t-applied"><div class="st-val" id="tile-applied">—</div><div class="st-label">Applied Total</div></div>
+</div>
+
+<div class="panel admin-panel">
+  <div class="panel-hd">
+    <div class="ph-dot" style="background:var(--accent2);box-shadow:var(--glow2)"></div>
+    <div class="ph-title">RESET REQUESTS</div>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <span id="pendingBadge" class="badge badge-red">0</span>
+      <span class="sort-label">⬇ OLDEST FIRST</span>
+      <button class="btn btn-orange btn-sm" onclick="loadAdminRequests(true)">↺ REFRESH ALL</button>
+    </div>
+  </div>
+  <div class="panel-body">
+    <div class="filter-bar">
+      <button class="filter-btn active-f-pending" id="af-pending" onclick="setAdminFilter('pending')">⏳ PENDING</button>
+      <button class="filter-btn" id="af-changed" onclick="setAdminFilter('changed')">⚡ EDITED</button>
+      <button class="filter-btn" id="af-applied" onclick="setAdminFilter('applied')">✓ APPLIED</button>
+      <button class="filter-btn" id="af-all" onclick="setAdminFilter('all')">ALL</button>
+      <input class="admin-search-box" id="adminSearchBox" type="text" placeholder="🔍  Search player ID or commander..." oninput="renderAdminRequests()">
+    </div>
+    <div class="new-arrival-banner" id="newArrivalBanner">
+      <span id="newArrivalText"></span>
+      <button onclick="applyNewArrivals()">SHOW NOW</button>
+    </div>
+    <div class="bulk-bar" id="bulkBar" style="display:none">
+      <span class="bulk-bar-text" id="bulkText"></span>
+      <button class="btn btn-green btn-xs" onclick="markAllApplied()">✓ MARK ALL APPLIED</button>
+    </div>
+    <div id="adminRequestsList"><div class="empty-state">// LOADING...</div></div>
+  </div>
+</div>
+
+</div><!-- .wrap -->
+</div><!-- #adminScreen -->
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://brtylfnzrcljicppargr.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydHlsZm56cmNsamljcHBhcmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MjU2OTMsImV4cCI6MjA3NzMwMTY5M30.cUFqyzyOlrJuM_CxdQcokXfj5-5NUnLorIriEHWDl2I';
+
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+let currentUser = null;
+
+// ── UTILS ──────────────────────────────────────────────────────────
+function setLoading(show, msg) {
+  document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+  if (msg) document.getElementById('loaderText').textContent = msg;
+}
+let toastTimer;
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+function showError(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.classList.add('show'); }
+function clearError(id) { document.getElementById(id).classList.remove('show'); }
+
+// ══════════════════════════════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════════════════════════════
+let loginGameId = '', isNewPlayer = false;
+
+async function checkGameId() {
+  const gid = document.getElementById('loginGameId').value.trim();
+  clearError('err-gameId');
+  if (!gid) { showError('err-gameId', '⚠ Enter your Game ID'); return; }
+  setLoading(true, 'VERIFYING GAME ID...');
+  try {
+    const { data, error } = await sb.from('players').select('game_id,is_admin').eq('game_id', gid).maybeSingle();
+    if (error) throw error;
+    loginGameId = gid; isNewPlayer = !data; showStep2(isNewPlayer);
+  } catch(e) { showError('err-gameId', '⚠ ' + (e.message || 'Connection error')); }
+  finally { setLoading(false); }
+}
+
+function showStep2(isNew) {
+  document.getElementById('loginStep1').style.display = 'none';
+  document.getElementById('loginStep2').style.display = 'block';
+  if (isNew) {
+    document.getElementById('step2Label').textContent = 'STEP 2 — CREATE YOUR PASSWORD';
+    document.getElementById('pwLabel').textContent = 'Choose a Password';
+    document.getElementById('pwInfo').textContent = 'First time? Set a password to secure your account.';
+    document.getElementById('confirmPwGroup').style.display = 'block';
+    document.getElementById('loginBtn').textContent = '🔐 CREATE ACCOUNT';
+  } else {
+    document.getElementById('step2Label').textContent = 'STEP 2 — ENTER PASSWORD';
+    document.getElementById('pwLabel').textContent = 'Password';
+    document.getElementById('pwInfo').textContent = '';
+    document.getElementById('confirmPwGroup').style.display = 'none';
+    document.getElementById('loginBtn').textContent = '🔐 LOGIN';
+  }
+  document.getElementById('loginPassword').focus();
+}
+
+function resetStep() {
+  document.getElementById('loginStep1').style.display = 'block';
+  document.getElementById('loginStep2').style.display = 'none';
+  clearError('err-pw'); clearError('err-pw2');
+  document.getElementById('loginPassword').value = '';
+  document.getElementById('loginPasswordConfirm').value = '';
+}
+
+async function doLogin() {
+  clearError('err-pw'); clearError('err-pw2');
+  const pw = document.getElementById('loginPassword').value;
+  if (!pw) { showError('err-pw', '⚠ Enter a password'); return; }
+  if (pw.length < 4) { showError('err-pw', '⚠ Password must be at least 4 characters'); return; }
+  const hash = await hashPassword(pw);
+  if (isNewPlayer) {
+    const pw2 = document.getElementById('loginPasswordConfirm').value;
+    if (pw !== pw2) { showError('err-pw2', '⚠ Passwords do not match'); return; }
+    setLoading(true, 'CREATING ACCOUNT...');
+    try {
+      const { error } = await sb.from('players').insert({ game_id: loginGameId, password_hash: hash, is_admin: false });
+      if (error) throw error;
+      currentUser = { game_id: loginGameId, is_admin: false }; enterApp();
+    } catch(e) { showError('err-pw', '⚠ ' + (e.message || 'Failed to create account')); }
+    finally { setLoading(false); }
+  } else {
+    setLoading(true, 'AUTHENTICATING...');
+    try {
+      const { data, error } = await sb.from('players').select('game_id,is_admin,password_hash').eq('game_id', loginGameId).maybeSingle();
+      if (error) throw error;
+      if (!data || data.password_hash !== hash) { showError('err-pw', '⚠ Incorrect password'); return; }
+      currentUser = { game_id: data.game_id, is_admin: data.is_admin }; enterApp();
+    } catch(e) { showError('err-pw', '⚠ ' + (e.message || 'Authentication failed')); }
+    finally { setLoading(false); }
+  }
+}
+
+function enterApp() {
+  document.getElementById('loginScreen').classList.remove('active');
+  if (currentUser.is_admin) {
+    document.getElementById('adminDisplayId').textContent = currentUser.game_id;
+    document.getElementById('adminScreen').classList.add('active');
+    loadAdminRequests(true);
+    startAutoRefresh();
+    showToast('Welcome, Admin ' + currentUser.game_id, 'success');
+  } else {
+    document.getElementById('displayGameId').textContent = currentUser.game_id;
+    document.getElementById('playerScreen').classList.add('active');
+    loadMyRequests(true);
+    showToast('Welcome, Commander ' + currentUser.game_id, 'success');
+  }
+}
+
+function doLogout() {
+  stopAutoRefresh();
+  currentUser = null; commanders = []; state = {};
+  document.getElementById('playerScreen').classList.remove('active');
+  document.getElementById('adminScreen').classList.remove('active');
+  document.getElementById('loginScreen').classList.add('active');
+  document.getElementById('loginGameId').value = '';
+  resetStep(); clearAll();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PLAYER — TAB SWITCHING
+// ══════════════════════════════════════════════════════════════════
+function switchPlayerTab(name) {
+  ['tool','requests'].forEach(t => {
+    document.getElementById('tab-' + t).classList.remove('active');
+    document.getElementById('tabContent-' + t).style.display = 'none';
+  });
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tabContent-' + name).style.display = 'block';
+  if (name === 'requests') loadMyRequests(false);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PLAYER — MY REQUESTS
+// ══════════════════════════════════════════════════════════════════
+let playerRequests = {};
+
+async function loadMyRequests(autoRestore = false) {
+  const el = document.getElementById('myRequestsList');
+  el.innerHTML = '<div class="empty-state">// LOADING...</div>';
+  try {
+    const { data, error } = await sb.from('reset_requests')
+      .select('*').eq('player_game_id', currentUser.game_id)
+      .order('requested_at', { ascending: false });
+    if (error) throw error;
+    playerRequests = {};
+    (data || []).forEach(r => { if (!playerRequests[r.commander_id]) playerRequests[r.commander_id] = r; });
+    if (!data || !data.length) { el.innerHTML = '<div class="empty-state">// NO REQUESTS YET</div>'; }
+    else {
+      el.innerHTML = data.map(r => {
+        const statusTag = r.status === 'applied'
+          ? `<span class="tag tag-applied">✓ APPLIED</span>`
+          : `<span class="tag tag-pending">PENDING</span>`;
+        const changedTag = r.is_changed ? `<span class="tag tag-changed">EDITED</span>` : '';
+        const dt = new Date(r.requested_at).toLocaleString();
+        return `<div class="req-entry">${statusTag}${changedTag}
+          <span class="req-name" style="color:var(--accent)">${r.commander_name}</span>
+          <span class="req-cmd">${r.command}</span>
+          <span class="req-meta">${dt}</span></div>`;
+      }).join('');
+    }
+    if (autoRestore && commanders.length === 0 && Object.keys(playerRequests).length > 0) {
+      restoreCommandersFromRequests();
+    }
+  } catch(e) { el.innerHTML = `<div class="empty-state">// ERROR: ${e.message}</div>`; }
+}
+
+function restoreCommandersFromRequests() {
+  const entries = Object.values(playerRequests);
+  if (!entries.length) return;
+  commanders = entries.map(r => ({ id: r.commander_id, name: r.commander_name, variance: 0 }));
+  state = {};
+  commanders.forEach(c => {
+    const req = playerRequests[c.id];
+    const savedStats = req ? req.stats : null;
+    state[c.id] = {
+      vals: savedStats ? { accuracy: savedStats.accuracy||0, speed: savedStats.speed||0, dodge: savedStats.dodge||0, electron: savedStats.electron||0 } : { accuracy:0, speed:0, dodge:0, electron:0 },
+      clickOrder: savedStats ? Object.keys(savedStats).filter(k => savedStats[k] > 0) : [],
+      mode: 'click', expanded: false, selected: false, restoredStatus: req ? req.status : null
+    };
+  });
+  ['cmdPanel','genPanel'].forEach(id => document.getElementById(id).style.display = 'block');
+  document.getElementById('outPanel').style.display = 'none';
+  document.getElementById('saveReqBtn').style.display = 'none';
+  lastGeneratedResults = [];
+  const noticeEl = document.getElementById('restoredNotice');
+  noticeEl.style.display = 'block';
+  noticeEl.innerHTML = `<div class="restored-notice">⟳ <span>Loaded ${commanders.length} commander${commanders.length!==1?'s':''} from your previous requests — stats pre-filled.</span></div>`;
+  renderCards(commanders); updateBadge();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PLAYER — SAVE RESET REQUEST
+// ══════════════════════════════════════════════════════════════════
+let lastGeneratedResults = [];
+
+async function saveResetRequest() {
+  if (!lastGeneratedResults.length) { showToast('Generate commands first', 'error'); return; }
+  setLoading(true, 'SAVING RESET REQUEST...');
+  let skipped = 0, updated = 0, inserted = 0;
+  try {
+    for (const r of lastGeneratedResults) {
+      const s = state[r.id];
+      const newStats = { ...s.vals };
+      const { data: rows } = await sb.from('reset_requests')
+        .select('id,stats,status,previous_stats')
+        .eq('player_game_id', currentUser.game_id).eq('commander_id', r.id)
+        .order('requested_at', { ascending: false }).limit(1);
+      const latest = rows && rows[0] ? rows[0] : null;
+      const _keys = ['accuracy','speed','dodge','electron'];
+      const statsMatch = latest && _keys.every(k => Number(latest.stats[k]||0) === Number(newStats[k]||0));
+      if (latest && statsMatch) { skipped++; continue; }
+      if (latest && latest.status === 'pending') {
+        await sb.from('reset_requests').update({ command: r.cmd, stats: newStats, previous_stats: latest.stats, is_changed: true, requested_at: new Date().toISOString() }).eq('id', latest.id);
+        updated++; continue;
+      }
+      await sb.from('reset_requests').insert({ player_game_id: currentUser.game_id, commander_id: r.id, commander_name: r.name, command: r.cmd, stats: newStats, previous_stats: latest ? latest.stats : null, status: 'pending', is_changed: false });
+      inserted++;
+    }
+    const parts = [];
+    if (inserted) parts.push(`${inserted} new`);
+    if (updated)  parts.push(`${updated} updated`);
+    if (skipped)  parts.push(`${skipped} unchanged`);
+    showToast('Requests saved — ' + parts.join(', '), 'success');
+    await loadMyRequests(false);
+    updateCardRequestStatuses();
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  finally { setLoading(false); }
+}
+
+function updateCardRequestStatuses() {
+  commanders.forEach(c => {
+    const req = playerRequests[c.id];
+    if (req) state[c.id].restoredStatus = req.status;
+    refreshCard(c.id);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ADMIN — REQUESTS
+// ══════════════════════════════════════════════════════════════════
+let allAdminRequests = [];
+let adminPendingQueue = [];
+let adminFilter = 'pending';
+let adminKnownIds = new Set();
+let refreshTimer = null;
+
+function startAutoRefresh() { stopAutoRefresh(); refreshTimer = setInterval(() => backgroundSync(), 30000); }
+function stopAutoRefresh() { if (refreshTimer) clearInterval(refreshTimer); refreshTimer = null; }
+
+async function loadAdminRequests(showLoader) {
+  if (showLoader) setLoading(true, 'LOADING REQUESTS...');
+  try {
+    const { data, error } = await sb.from('reset_requests').select('*').order('requested_at', { ascending: true });
+    if (error) throw error;
+    allAdminRequests = data || [];
+    adminKnownIds = new Set(allAdminRequests.map(r => r.id));
+    adminPendingQueue = [];
+    hideBanner();
+    updateAdminTiles();
+    renderAdminRequests();
+  } catch(e) {
+    document.getElementById('adminRequestsList').innerHTML = `<div class="empty-state">// ERROR: ${e.message}</div>`;
+  } finally { if (showLoader) setLoading(false); }
+}
+
+async function backgroundSync() {
+  setSyncState('syncing');
+  try {
+    const { data, error } = await sb.from('reset_requests').select('*').order('requested_at', { ascending: true });
+    if (error) throw error;
+    const fresh = data || [];
+    const freshMap = new Map(fresh.map(r => [r.id, r]));
+    let patchedCount = 0;
+    allAdminRequests.forEach((r, idx) => {
+      const f = freshMap.get(r.id);
+      if (!f) return;
+      if (f.status !== r.status || f.is_changed !== r.is_changed || f.applied_at !== r.applied_at) {
+        allAdminRequests[idx] = f; patchedCount++;
+        patchRowInDOM(f);
+      }
+    });
+    const newRows = fresh.filter(r => !adminKnownIds.has(r.id));
+    if (newRows.length) { adminPendingQueue = newRows; showBanner(newRows.length); }
+    else if (patchedCount > 0) { updateAdminTiles(); setSyncState('new-data', `${patchedCount} UPDATED`); setTimeout(() => setSyncState('idle'), 3000); }
+    else { setSyncState('idle'); }
+  } catch(e) { setSyncState('idle'); }
+}
+
+function patchRowInDOM(r) {
+  const el = document.getElementById('rrow-' + r.id);
+  if (!el) return;
+  const isApplied = r.status === 'applied';
+  el.classList.toggle('is-applied', isApplied);
+  el.classList.toggle('is-changed', !!r.is_changed);
+  const tagEl = el.querySelector('.tag');
+  if (tagEl) { tagEl.className = 'tag ' + (isApplied ? 'tag-applied' : 'tag-pending'); tagEl.textContent = isApplied ? '✓ APPLIED' : 'PENDING'; }
+  const actions = el.querySelector('.req-actions');
+  if (actions) {
+    const btn = actions.querySelector('.btn');
+    if (btn) {
+      if (isApplied) { btn.className = 'btn btn-red btn-xs'; btn.textContent = '↩ UNDO'; btn.setAttribute('onclick', `undoApplied('${r.id}')`); }
+      else { btn.className = 'btn btn-green btn-xs'; btn.textContent = '✓ MARK APPLIED'; btn.setAttribute('onclick', `markApplied('${r.id}')`); }
+    }
+  }
+}
+
+function showBanner(count) {
+  const b = document.getElementById('newArrivalBanner');
+  document.getElementById('newArrivalText').textContent = `⚡ ${count} new request${count > 1 ? 's' : ''} received`;
+  b.classList.add('visible');
+  setSyncState('new-data', `+${count} NEW`);
+}
+function hideBanner() { document.getElementById('newArrivalBanner').classList.remove('visible'); }
+
+function applyNewArrivals() {
+  if (!adminPendingQueue.length) { hideBanner(); return; }
+  const expandedGroups = new Set([...document.querySelectorAll('.player-group.expanded')].map(el => el.id.replace('pg-', '')));
+  const newIds = new Set(adminPendingQueue.map(r => r.id));
+  adminPendingQueue.forEach(r => { allAdminRequests.push(r); adminKnownIds.add(r.id); });
+  allAdminRequests.sort((a, b) => new Date(a.requested_at) - new Date(b.requested_at));
+  adminPendingQueue = [];
+  hideBanner(); updateAdminTiles(); renderAdminRequests(newIds); setSyncState('idle');
+  expandedGroups.forEach(pid => { const el = document.getElementById('pg-' + pid); if (el) el.classList.add('expanded'); });
+  newIds.forEach(id => { const r = allAdminRequests.find(x => x.id === id); if (r) { const el = document.getElementById('pg-' + r.player_game_id); if (el) el.classList.add('expanded'); } });
+}
+
+function setSyncState(state, label) {
+  const chip = document.getElementById('syncChip');
+  const lbl = document.getElementById('syncLabel');
+  chip.className = 'sync-chip' + (state !== 'idle' ? ' ' + state : '');
+  if (state === 'syncing') lbl.textContent = 'SYNCING...';
+  else if (state === 'new-data') lbl.textContent = label || 'NEW DATA';
+  else lbl.textContent = 'SYNC IDLE';
+}
+
+function updateAdminTiles() {
+  const pending = allAdminRequests.filter(r => r.status === 'pending');
+  const changed = pending.filter(r => r.is_changed);
+  const applied = allAdminRequests.filter(r => r.status === 'applied');
+  const players = new Set(allAdminRequests.map(r => r.player_game_id)).size;
+  document.getElementById('tile-pending').textContent = pending.length;
+  document.getElementById('tile-changed').textContent = changed.length;
+  document.getElementById('tile-players').textContent = players;
+  document.getElementById('tile-applied').textContent = applied.length;
+  document.getElementById('pendingBadge').textContent = pending.length;
+}
+
+function setAdminFilter(f) {
+  adminFilter = f;
+  ['pending','changed','applied','all'].forEach(id => {
+    const btn = document.getElementById('af-' + id);
+    btn.className = 'filter-btn';
+    if (id === f) {
+      if (f === 'pending') btn.classList.add('active-f-pending');
+      else if (f === 'applied') btn.classList.add('active-f-applied');
+      else btn.classList.add('active-f');
+    }
+  });
+  renderAdminRequests();
+}
+
+function getAdminFiltered() {
+  const q = document.getElementById('adminSearchBox').value.toLowerCase().trim();
+  let list = [...allAdminRequests];
+  if (adminFilter === 'pending') list = list.filter(r => r.status === 'pending');
+  else if (adminFilter === 'changed') list = list.filter(r => r.is_changed && r.status === 'pending');
+  else if (adminFilter === 'applied') list = list.filter(r => r.status === 'applied');
+  if (q) list = list.filter(r => r.player_game_id.includes(q) || r.commander_name.toLowerCase().includes(q) || r.commander_id.includes(q) || r.command.toLowerCase().includes(q));
+  return list;
+}
+
+function renderAdminRequests(newArrivalIds) {
+  const list = getAdminFiltered();
+  const el = document.getElementById('adminRequestsList');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">// NO REQUESTS MATCH THIS FILTER</div>'; document.getElementById('bulkBar').style.display = 'none'; return; }
+  const pendingInView = list.filter(r => r.status === 'pending');
+  const bulkBar = document.getElementById('bulkBar');
+  if (pendingInView.length > 1) { bulkBar.style.display = 'flex'; document.getElementById('bulkText').textContent = `${pendingInView.length} pending requests visible — mark all applied at once`; }
+  else { bulkBar.style.display = 'none'; }
+  const grouped = new Map();
+  list.forEach(r => { if (!grouped.has(r.player_game_id)) grouped.set(r.player_game_id, []); grouped.get(r.player_game_id).push(r); });
+  el.innerHTML = [...grouped.entries()].map(([pid, reqs]) => {
+    const pendingCount = reqs.filter(r => r.status === 'pending').length;
+    const changedCount = reqs.filter(r => r.is_changed).length;
+    return `<div class="player-group ${pendingCount ? 'has-pending' : ''}" id="pg-${pid}">
+      <div class="pg-header" onclick="toggleAdminGroup('${pid}')">
+        <div class="pg-player-id">#${pid}</div>
+        <div class="pg-player-label">PLAYER</div>
+        ${pendingCount ? `<span class="badge badge-red">${pendingCount} PENDING</span>` : ''}
+        ${changedCount ? `<span class="badge badge-gold">${changedCount} EDITED</span>` : ''}
+        <div style="margin-left:auto;font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text2);margin-right:8px">${reqs.length} request${reqs.length!==1?'s':''}</div>
+        <div class="pg-arrow">▼</div>
+      </div>
+      <div class="pg-body">${reqs.map(r => buildAdminRow(r, newArrivalIds && newArrivalIds.has(r.id))).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildAdminRow(r, isNewArrival) {
+  const isApplied = r.status === 'applied';
+  const statusTag = isApplied ? `<span class="tag tag-applied">✓ APPLIED</span>` : `<span class="tag tag-pending">PENDING</span>`;
+  const changedTag = r.is_changed ? `<span class="tag tag-changed">⚡ EDITED</span>` : '';
+  let diffHtml = '';
+  if (r.is_changed && r.previous_stats) {
+    const diffs = ['accuracy','speed','dodge','electron'].filter(k => (r.previous_stats[k]||0) !== (r.stats[k]||0));
+    if (diffs.length) diffHtml = `<div class="req-diff">${diffs.map(k => `<div class="diff-item"><span class="diff-old">${k[0].toUpperCase()+k.slice(1,3)}:${r.previous_stats[k]||0}</span><span class="diff-arrow">→</span><span class="diff-new">${k[0].toUpperCase()+k.slice(1,3)}:${r.stats[k]||0}</span></div>`).join('')}</div>`;
+  }
+  const dt = formatDate(r.requested_at);
+  const appliedDt = r.applied_at ? `· Applied ${formatDate(r.applied_at)}` : '';
+  const safeCmd = r.command.replace(/'/g, "\\'");
+  const actionBtn = !isApplied ? `<button class="btn btn-green btn-xs" onclick="markApplied('${r.id}')">✓ MARK APPLIED</button>` : `<button class="btn btn-red btn-xs" onclick="undoApplied('${r.id}')">↩ UNDO</button>`;
+  return `<div class="req-row ${isApplied?'is-applied':''} ${r.is_changed?'is-changed':''}${isNewArrival?' is-new-arrival':''}" id="rrow-${r.id}">
+    <div class="req-left">
+      <div class="req-top">${statusTag}${changedTag}<span class="req-commander-name">${r.commander_name}</span><span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text2)">#${r.commander_id}</span></div>
+      <div class="req-cmd-text">${r.command}</div>${diffHtml}
+      <div class="req-meta-row"><span class="req-meta-text">Requested ${dt} ${appliedDt}</span></div>
+    </div>
+    <div class="req-actions">
+      <button class="copy-cmd-btn" onclick="copyAdminCmd(this,'${safeCmd}')">COPY CMD</button>
+      ${actionBtn}
+    </div>
+  </div>`;
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'}) + ' ' + d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+function toggleAdminGroup(pid) { document.getElementById('pg-' + pid).classList.toggle('expanded'); }
+
+async function markApplied(reqId) {
+  try {
+    const { error } = await sb.from('reset_requests').update({ status: 'applied', applied_at: new Date().toISOString() }).eq('id', reqId);
+    if (error) throw error;
+    const r = allAdminRequests.find(x => x.id === reqId);
+    if (r) { r.status = 'applied'; r.applied_at = new Date().toISOString(); }
+    updateAdminTiles(); renderAdminRequests(); showToast('Marked as applied', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function undoApplied(reqId) {
+  try {
+    const { error } = await sb.from('reset_requests').update({ status: 'pending', applied_at: null }).eq('id', reqId);
+    if (error) throw error;
+    const r = allAdminRequests.find(x => x.id === reqId);
+    if (r) { r.status = 'pending'; r.applied_at = null; }
+    updateAdminTiles(); renderAdminRequests(); showToast('Reset to pending', 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+}
+
+async function markAllApplied() {
+  const pending = getAdminFiltered().filter(r => r.status === 'pending');
+  if (!pending.length) return;
+  setLoading(true, `APPLYING ${pending.length} REQUESTS...`);
+  try {
+    const ids = pending.map(r => r.id);
+    const { error } = await sb.from('reset_requests').update({ status: 'applied', applied_at: new Date().toISOString() }).in('id', ids);
+    if (error) throw error;
+    const now = new Date().toISOString();
+    allAdminRequests.forEach(r => { if (ids.includes(r.id)) { r.status = 'applied'; r.applied_at = now; } });
+    updateAdminTiles(); renderAdminRequests(); showToast(`${ids.length} requests marked as applied`, 'success');
+  } catch(e) { showToast('Error: ' + e.message, 'error'); }
+  finally { setLoading(false); }
+}
+
+function copyAdminCmd(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ COPIED'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'COPY CMD'; btn.classList.remove('ok'); }, 1200);
+    const row = btn.closest('.req-row'); if (row) row.classList.add('was-copied');
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// COMMANDER DATABASE & STATS TOOL
+// ══════════════════════════════════════════════════════════════════
+const CMD_DB = {
+  "angla":["dodge"],"leo":["electron"],"natiya":["speed"],"reggie":["electron"],
+  "eveline":["accuracy"],"stani":["accuracy","electron"],"sofia":["speed"],
+  "jason":["electron"],"maletiz":["dodge","electron"],"nick":["dodge"],
+  "jerome":["accuracy"],"aileen":["electron","speed"],"alicia":["accuracy"],
+  "panis":["electron"],"annata":["speed"],"kelly":["speed"],"rayllf":["speed"],
+  "donna":["speed"],"sylva":null,"gastaf":["accuracy"],"taude":null,
+  "wayne":["accuracy"],"sandora":["accuracy","speed"],"raslin":["electron"],
+  "maxius":["accuracy"],"penni":["accuracy"],"motima":["accuracy"],
+  "ringel":["accuracy"],"anna":["accuracy"],"linda":["accuracy"],
+  "heloyce":["dodge"],"shaba":["dodge"],"nora":["accuracy","dodge"],
+  "mantie":["dodge"],"vinna":["dodge"],"singhri":null,"sylla":["dodge"],
+  "rayo":null,"bruce":["electron"],"marcus":["accuracy","speed"],
+  "bart":["electron","speed"],"lawrence":["accuracy"],"evi":["accuracy"],
+  "tyren":["accuracy"],"essido":["accuracy"],"robert":null,"dilira":["speed"],
+  "hellen":["accuracy","electron"],"todd":["accuracy"],"rafia":null,
+  "joseph":null,"carlos":["accuracy","speed"],"jakar":null,"rocky":null,
+  "andrew":null,"lynn":null,"miller":null,"cassius":["accuracy","dodge"],
+  "bain":["accuracy","dodge"],"krina klaus":["dodge"],"medusa":["dodge","electron"],
+  "venus":["dodge","speed"],"circe":["accuracy","dodge"],"callisto":["accuracy"],
+  "eva":["accuracy","electron"],"javal":null,"slayer bael":["accuracy","dodge"],
+  "luna silvestri":["speed","dodge"],"chrome dome":["accuracy","dodge"],
+  "shadow countess":["speed","dodge"],"murphy lawson":["dodge","speed"],
+  "victory roar":["accuracy"],"rays of destiny":["speed","dodge"],
+  "impending doom":["dodge","electron"],"desolate prayers":["accuracy","speed"],
+  "deadly duo":["accuracy"],"frontline surge":["speed"],
+  "the twin torpedoes":["accuracy"],"light and darkness":["speed"],
+  "kismet beams":["accuracy","speed"],"fatal furies":["accuracy","speed"],
+  "indomitable duo":["dodge"],"death from above":null,"leech lurkers":["accuracy","speed"],
+  "eternal terrors":["accuracy","electron"],"feral raptors":["accuracy","speed"],
+  "iron maidens":["speed","dodge"],"fairy & fiend":["accuracy","speed"],
+  "fairy and fiend":["accuracy","speed"],"suicidal sirens":["accuracy","electron"],
+  "wildfire":["accuracy","electron"],"tactical wizards":["dodge","electron"],
+  "fearmongers":["electron"],"pernicious princes":null,"summa cum laude":["accuracy","speed"],
+  "carbuncle cohort":["speed","dodge"],"enduring chorus":["speed"],
+  "the ravagers":["accuracy","electron"],"rex scuta":null,
+  "lurking light":["speed","dodge"],"titan":null,
+  "eschaton adventists":["accuracy","dodge"],"hand of lelantos":["accuracy"],
+  "hekatian witnesses":["accuracy","dodge"],"dopplegangers":["speed","dodge"],
+  "erebus errants":["speed","dodge"],"homeric hellions":["dodge"],
+  "winter knights":["accuracy","dodge"],"the heartless ones":["accuracy","dodge"],
+  "the forsaken":["accuracy","dodge"],"the dictators":null,
+  "dune enforcers":["dodge","speed"],"technomancers":["accuracy","dodge"],
+  "queens of blades":["accuracy","speed"],"the pioneers":null,"lumos":["accuracy","speed"],
+};
+
+const COMMANDERS_LIST = [
+  {name:"Angla",image:"commanders/Command2.jpg",skillName:"Fleet EMT"},{name:"Leo",image:"commanders/Command14.jpg",skillName:"Intimidate"},{name:"Natiya",image:"commanders/Command10.jpg",skillName:"First Strike"},{name:"Reggie",image:"commanders/Command15.jpg",skillName:"Paralyze"},{name:"Eveline",image:"commanders/Command3.jpg",skillName:"Find Weakness"},{name:"Stani",image:"commanders/Command39.jpg",skillName:"Interference"},{name:"Sofia",image:"commanders/Command20.jpg",skillName:"Maneuvering"},{name:"Jason",image:"commanders/Command17.jpg",skillName:"Save Energy"},{name:"Maletiz",image:"commanders/Command40.jpg",skillName:"Revenge"},{name:"Nick",image:"commanders/Command9.jpg",skillName:"Divine Intervention"},{name:"Jerome",image:"commanders/Command1.jpg",skillName:"Curse"},{name:"Aileen",image:"commanders/Command29.jpg",skillName:"Command Break"},{name:"Alicia",image:"commanders/Command30.jpg",skillName:"Inspiration"},{name:"Panis",image:"commanders/Command27.jpg",skillName:"Intercept"},{name:"Annata",image:"commanders/Command28.jpg",skillName:"Allied Support"},{name:"Kelly",image:"commanders/Command24.jpg",skillName:"Resourceful"},{name:"Rayllf",image:"commanders/Command16.jpg",skillName:"Armor Repair"},{name:"Donna",image:"commanders/Command6.jpg",skillName:"Defensive Intensity"},{name:"Sylva",image:"commanders/Command4.jpg",skillName:"Smash"},{name:"Gastaf",image:"commanders/Command25.jpg",skillName:"Deadly Strike"},{name:"Taude",image:"commanders/Command0.jpg",skillName:"Lucky Shot"},{name:"Wayne",image:"commanders/Command5.jpg",skillName:"Lucky Hit"},{name:"Sandora",image:"commanders/Command7.jpg",skillName:"Lucky Strike"},{name:"Raslin",image:"commanders/Command31.jpg",skillName:"Fear"},{name:"Maxius",image:"commanders/Command12.jpg",skillName:"Allied Strike"},{name:"Penni",image:"commanders/Command23.jpg",skillName:"Last Stand"},{name:"Motima",image:"commanders/Command38.jpg",skillName:"Accuracy"},{name:"Ringel",image:"commanders/Command22.jpg",skillName:"Ignite"},{name:"Anna",image:"commanders/Command18.jpg",skillName:"Pierce"},{name:"Linda",image:"commanders/Command13.jpg",skillName:"Broadside"},{name:"Heloyce",image:"commanders/Command26.jpg",skillName:"Stability"},{name:"Shaba",image:"commanders/Command21.jpg",skillName:"Allied Evasion"},{name:"Nora",image:"commanders/Command8.jpg",skillName:"Massacre"},{name:"Mantie",image:"commanders/Command11.jpg",skillName:"Command Strike"},{name:"Vinna",image:"commanders/Command19.jpg",skillName:"Cunning"},{name:"Singhri",image:"commanders/Command32.jpg",skillName:"Copycat"},{name:"Sylla",image:"commanders/Command34.jpg",skillName:"Fleet Link"},{name:"Rayo",image:"commanders/Command36.jpg",skillName:"Superior Command"},{name:"Bruce",image:"commanders/Command35.jpg",skillName:"Drain Supplies"},{name:"Marcus",image:"commanders/Command33.jpg",skillName:"Breakthrough"},{name:"Bart",image:"commanders/Command37.jpg",skillName:"Raid"},{name:"Lawrence",image:"commanders/Command41.jpg",skillName:"Ballistic Expertise"},{name:"Evi",image:"commanders/Command42.jpg",skillName:"Directional Expertise"},{name:"Tyren",image:"commanders/Command43.jpg",skillName:"Missile Expertise"},{name:"Essido",image:"commanders/Command44.jpg",skillName:"Ship-based Expertise"},{name:"Robert",image:"commanders/Command45.jpg",skillName:"Lethality"},{name:"Dilira",image:"commanders/Command46.jpg",skillName:"Renewal"},{name:"Hellen",image:"commanders/Command47.jpg",skillName:"Rapid Reload"},{name:"Todd",image:"commanders/Command48.jpg",skillName:"Consecutive Strike"},{name:"Rafia",image:"commanders/Command50.jpg",skillName:"Stability Control"},{name:"Joseph",image:"commanders/Command49.jpg",skillName:"Vengeance"},{name:"Carlos",image:"commanders/Command51.jpg",skillName:"Fear Fiend"},{name:"Jakar",image:"commanders/Command52.jpg",skillName:"Aegis Shatter"},{name:"Rocky",image:"commanders/Command53.jpg",skillName:"Brutal Strength"},{name:"Andrew",image:"commanders/Command54.jpg",skillName:"Acrobatics"},{name:"Lynn",image:"commanders/Command55.jpg",skillName:"Victory Rush"},{name:"Miller",image:"commanders/Command56.jpg",skillName:"Pulverizer"},{name:"Victory Roar",image:"commanders/Command57.jpg",skillName:"Eradicate"},{name:"Rays of Destiny",image:"commanders/Command58.jpg",skillName:"Judgement"},{name:"Impending Doom",image:"commanders/Command59.jpg",skillName:"Insidious Infliction"},{name:"Desolate Prayers",image:"commanders/Command60.jpg",skillName:"Decaying Wane"},{name:"Deadly Duo",image:"commanders/Command61.jpg",skillName:"Crucifer Sweep"},{name:"Frontline Surge",image:"commanders/Command62.jpg",skillName:"Pioneer Prowl"},{name:"The Twin Torpedoes",image:"commanders/Command63.jpg",skillName:"Sharpshooter Storm"},{name:"Light and Darkness",image:"commanders/Command64.jpg",skillName:"Darkened Halo"},{name:"Kismet Beams",image:"commanders/Command65.jpg",skillName:"Supreme Smite"},{name:"Fatal Furies",image:"commanders/Command66.jpg",skillName:"Battering Barrage"},{name:"Indomitable Duo",image:"commanders/Command67.jpg",skillName:"Divine Barrier"},{name:"Death From Above",image:"commanders/Command68.jpg",skillName:"Death's Clutches"},{name:"Leech Lurkers",image:"commanders/Command69.jpg",skillName:"Covert Syphon"},{name:"Eternal Terrors",image:"commanders/Command70.jpg",skillName:"Battle Preparations"},{name:"Feral Raptors",image:"commanders/Command71.jpg",skillName:"Suicide Strike"},{name:"Iron Maidens",image:"commanders/Command72.jpg",skillName:"Fountain of Youth"},{name:"Fairy and Fiend",image:"commanders/Command73.jpg",skillName:"Double Whammy"},{name:"Suicidal Sirens",image:"commanders/Command74.jpg",skillName:"Risky Surge"},{name:"Wildfire",image:"commanders/Command75.jpg",skillName:"Trigger Happy"},{name:"Tactical Wizards",image:"commanders/Command76.jpg",skillName:"Bamboozle"},{name:"Fearmongers",image:"commanders/Command77.jpg",skillName:"Omen of Doom"},{name:"Pernicious Princes",image:"commanders/Command78.jpg",skillName:"Chain Vortex"},{name:"Summa Cum Laude",image:"commanders/Command79.jpg",skillName:"Verdant Force"},{name:"Carbuncle Cohort",image:"commanders/Command80.jpg",skillName:"Corrosive Coil"},{name:"Enduring Chorus",image:"commanders/Command81.jpg",skillName:"Renewed Faith"},{name:"The Ravagers",image:"commanders/Command82.jpg",skillName:"Smash & Grab"},{name:"Rex Scuta",image:"commanders/Command83.jpg",skillName:"Immunity"},{name:"Lurking Light",image:"commanders/Command84.jpg",skillName:"Phasing Halo"},{name:"Titan",image:"commanders/Command85.jpg",skillName:"Adaptive Mutation"},{name:"Eschaton Adventists",image:"commanders/Command86.jpg",skillName:"Abject Humiliation"},{name:"Hand of Lelantos",image:"commanders/Command87.jpg",skillName:"Unseen Strike"},{name:"Hekatian Witnesses",image:"commanders/Command88.jpg",skillName:"Hekatian Edict"},{name:"Dopplegangers",image:"commanders/Command89.jpg",skillName:"Fierce Mutation"},{name:"Erebus Errants",image:"commanders/Command90.jpg",skillName:"Shadow Storm"},{name:"Cassius",image:"commanders/Command91.jpg",skillName:"Knockout Blow"},{name:"Bain",image:"commanders/Command92.jpg",skillName:"Reckoning"},{name:"Krina Klaus",image:"commanders/Command93.jpg",skillName:"Winter's Gift"},{name:"Homeric Hellions",image:"commanders/Command94.jpg",skillName:"Defiant Cry"},{name:"Winter Knights",image:"commanders/Command95.jpg",skillName:"Snow Blind"},{name:"Medusa",image:"commanders/Command96.jpg",skillName:"Gorgon Gaze"},{name:"Venus",image:"commanders/Command97.jpg",skillName:"Gift of Romance"},{name:"The Heartless Ones",image:"commanders/Command98.jpg",skillName:"Silence"},{name:"The Forsaken",image:"commanders/Command99.jpg",skillName:"Brainwash"},{name:"Callisto",image:"commanders/Command100.jpg",skillName:"A Fire Rises"},{name:"Circe",image:"commanders/Command101.jpg",skillName:"Hex"},{name:"The Pioneers",image:"commanders/Command102.jpg",skillName:"Singularity"},{name:"Technomancers",image:"commanders/Command103.jpg",skillName:"Null Field"},{name:"Queens of Blades",image:"commanders/Command104.jpg",skillName:"Assimilation"},{name:"The Dictators",image:"commanders/Command105.jpg",skillName:"Mutated Dominance"},{name:"Dune Enforcers",image:"commanders/Command106.jpg",skillName:"Shadow Counter"},{name:"Slayer Bael",image:"commanders/Command107.jpg",skillName:"Berserker Barrage"},{name:"Luna Silvestri",image:"commanders/Command108.jpg",skillName:"Moon Blessing"},{name:"Chrome Dome",image:"commanders/Command109.jpg",skillName:"10-Ton Strike"},{name:"Shadow Countess",image:"commanders/Command110.jpg",skillName:"Shadow Cloak"},{name:"Murphy Lawson",image:"commanders/Command111.jpg",skillName:"Rock 'N Roll"},{name:"Eva",image:"commanders/Command112.jpg",skillName:"Double Down"},{name:"Javal",image:"commanders/Command113.jpg",skillName:"Adrenaline Surge"},{name:"Lumos",image:"commanders/Command114.jpg",skillName:"Reverse Shielding"},
+];
+
+const STATS = [
+  {key:'accuracy',icon:'🎯',label:'Accuracy',cls:'sg-acc',chipCls:'active-acc'},
+  {key:'speed',icon:'⚡',label:'Speed',cls:'sg-spd',chipCls:'active-spd'},
+  {key:'dodge',icon:'〉〉',label:'Dodge',cls:'sg-dod',chipCls:'active-dod'},
+  {key:'electron',icon:'⚛️',label:'Electron',cls:'sg-ele',chipCls:'active-ele'},
+];
+
+let commanders = [];
+let state = {};
+
+function getAbilityStats(name) {
+  const key = name.toLowerCase().trim();
+  if (CMD_DB.hasOwnProperty(key)) return CMD_DB[key];
+  for (const k of Object.keys(CMD_DB)) if (key.includes(k) || k.includes(key)) return CMD_DB[k];
+  return undefined;
+}
+function getCommanderMeta(name) {
+  const key = name.toLowerCase();
+  return COMMANDERS_LIST.find(c => c.name.toLowerCase() === key) || COMMANDERS_LIST.find(c => key.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(key));
+}
+function smartPair(name) {
+  const stats = getAbilityStats(name);
+  if (!stats || !stats.length) return null;
+  if (stats.length >= 2) return [stats[0], stats[1]];
+  return [stats[0], stats[0] === 'speed' ? 'accuracy' : 'speed'];
+}
+function statTotal(id) { return Math.round(Object.values(state[id].vals).reduce((a,b) => a+b, 0) * 10) / 10; }
+function buildInfoText(id) {
+  const s = state[id];
+  const nonZero = STATS.filter(st => s.vals[st.key] > 0);
+  if (!nonZero.length) return 'No stats configured';
+  const total = statTotal(id);
+  const parts = nonZero.map(st => `<span>${st.label}=${s.vals[st.key]}</span>`);
+  const totalHtml = total === 10 ? `<span style="color:var(--accent3)">TOTAL: ${total}/10 ✓</span>` : total > 10 ? `<span style="color:var(--danger);font-weight:700">TOTAL: ${total}/10 ⚠ EXCEEDS LIMIT</span>` : `<span style="color:var(--accent2)">TOTAL: ${total}/10 — must equal 10</span>`;
+  return `${parts.join(' + ')} — ${totalHtml}`;
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function statsMatchExisting(id) {
+  const existing = playerRequests[id];
+  if (!existing || !existing.stats) return false;
+  const keys = ['accuracy','speed','dodge','electron'];
+  return keys.every(k => Number(existing.stats[k]||0) === Number(state[id].vals[k]||0));
+}
+
+function clickToggleStat(id, key) {
+  const s = state[id];
+  if (s.vals[key] > 0) { s.vals[key] = 0; s.clickOrder = s.clickOrder.filter(k => k !== key); }
+  else { if (s.clickOrder.length >= 2) { const o = s.clickOrder.shift(); s.vals[o] = 0; } s.vals[key] = 5; s.clickOrder.push(key); s.selected = true; }
+  refreshCard(id); updateBadge();
+}
+function spinnerChange(id, key, delta) {
+  const s = state[id];
+  let next = Math.round((s.vals[key] + delta) * 10) / 10;
+  next = clamp(next, 0, 5); s.vals[key] = next;
+  if (next > 0) s.selected = true;
+  const inp = document.getElementById('spin-' + id + '-' + key);
+  if (inp) inp.value = next;
+  updateInfoLabel(id); updateBadge();
+}
+function spinnerInput(id, key, val) {
+  let v = parseFloat(val); if (isNaN(v)) v = 0;
+  v = clamp(Math.round(v * 10) / 10, 0, 5);
+  state[id].vals[key] = v; if (v > 0) state[id].selected = true;
+  updateInfoLabel(id); updateBadge();
+}
+function updateInfoLabel(id) { const el = document.getElementById('si-' + id); if (el) el.innerHTML = buildInfoText(id); }
+function setMode(id, mode) { state[id].mode = mode; refreshCard(id); }
+
+function parseBulletin() {
+  const raw = document.getElementById('bulletinInput').value;
+  const reOld = /\[Bulletin\]:\s*(\d+):\s*(.+?)\s*\(Variance:\s*([+-]?\d+)\)/g;
+  const reNew = /\[Bulletin\]:\s*\[(\d+)\]\s+(.+?)\s*[—–-]+\s*variance:\s*([+-]?\d+)/gi;
+  let foundOld = [], foundNew = [], m;
+  while ((m = reOld.exec(raw)) !== null) foundOld.push({id:m[1],name:m[2].trim(),variance:parseInt(m[3])});
+  while ((m = reNew.exec(raw)) !== null) foundNew.push({id:m[1],name:m[2].trim(),variance:parseInt(m[3])});
+  let detected = 'none';
+  if (foundOld.length > 0 && foundNew.length === 0) { commanders = foundOld; detected = 'old'; }
+  else if (foundNew.length > 0 && foundOld.length === 0) { commanders = foundNew; detected = 'new'; }
+  else if (foundOld.length > 0 && foundNew.length > 0) { const merged = new Map(); foundOld.forEach(c => merged.set(c.id,c)); foundNew.forEach(c => merged.set(c.id,c)); commanders = [...merged.values()]; detected = 'mixed'; }
+  else { commanders = []; }
+  const statusEl = document.getElementById('parseStatus');
+  const badgeEl = document.getElementById('fmtBadge');
+  if (!commanders.length) { statusEl.textContent = '⚠ No commanders found'; badgeEl.style.display = 'none'; return; }
+  statusEl.textContent = `✓ ${commanders.length} commander${commanders.length!==1?'s':''} loaded`;
+  const fmtMap = {old:{cls:'fmt-old',label:'FORMAT: CLASSIC'},new:{cls:'fmt-new',label:'FORMAT: NEW'},mixed:{cls:'fmt-new',label:'FORMAT: MIXED'}};
+  const fmt = fmtMap[detected]; badgeEl.className = `fmt-badge ${fmt.cls}`; badgeEl.textContent = fmt.label; badgeEl.style.display = 'inline-block';
+  state = {};
+  commanders.forEach(c => {
+    const existing = playerRequests[c.id];
+    state[c.id] = {
+      vals: existing ? {accuracy:existing.stats.accuracy||0,speed:existing.stats.speed||0,dodge:existing.stats.dodge||0,electron:existing.stats.electron||0} : {accuracy:0,speed:0,dodge:0,electron:0},
+      clickOrder: existing ? Object.keys(existing.stats).filter(k => existing.stats[k] > 0) : [],
+      mode: 'click', expanded: false, selected: false, restoredStatus: existing ? existing.status : null
+    };
+  });
+  ['cmdPanel','genPanel'].forEach(id => document.getElementById(id).style.display = 'block');
+  document.getElementById('outPanel').style.display = 'none';
+  document.getElementById('outList').innerHTML = '<div class="empty-state">// AWAITING COMMAND GENERATION</div>';
+  document.getElementById('outBadge').textContent = '0';
+  document.getElementById('saveReqBtn').style.display = 'none';
+  document.getElementById('restoredNotice').style.display = 'none';
+  lastGeneratedResults = [];
+  renderCards(commanders); updateBadge();
+}
+
+function applyPreset(mode) {
+  const ids = Object.entries(state).filter(([,s]) => s.selected).map(([id]) => id);
+  if (!ids.length) { showPresetWarn('⚠ No commanders selected.'); return; }
+  let unknowns = [];
+  ids.forEach(id => {
+    const c = commanders.find(x => x.id === id); const s = state[id];
+    s.vals = {accuracy:0,speed:0,dodge:0,electron:0};
+    if (mode === 'spd_acc') { s.vals.speed = 5; s.vals.accuracy = 5; s.clickOrder = ['accuracy','speed']; }
+    else if (mode === 'ability_smart') {
+      const pair = smartPair(c.name);
+      if (pair) { pair.forEach(k => s.vals[k] = 5); s.clickOrder = [...pair]; }
+      else { s.vals.speed = 5; s.vals.accuracy = 5; s.clickOrder = ['accuracy','speed']; unknowns.push(c.name); }
+    }
+  });
+  rerenderVisible(); updateBadge();
+  if (unknowns.length) showPresetWarn(`⚠ No ability data for: ${unknowns.join(', ')} → defaulted to SPD+ACC`);
+}
+function showPresetWarn(msg) { const w = document.getElementById('genWarn'); w.textContent = msg; w.style.display = 'block'; setTimeout(() => w.style.display = 'none', 5000); }
+
+function renderCards(list) {
+  const el = document.getElementById('cardList');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">// NO MATCH</div>'; return; }
+  el.innerHTML = list.map(c => buildCard(c)).join('');
+}
+
+function buildCard(c) {
+  const s = state[c.id];
+  const meta = getCommanderMeta(c.name);
+  const imgSrc = meta ? meta.image : null;
+  const skillName = meta ? meta.skillName : '';
+  const vCls = c.variance > 0 ? 'vp' : c.variance < 0 ? 'vn' : 'vz';
+  const vTxt = c.variance > 0 ? '+' + c.variance : c.variance;
+  const activeCls = s.selected ? 'active' : '';
+  const expandCls = s.expanded ? 'expanded' : '';
+  let reqBadge = '', cardStatusCls = '';
+  if (s.restoredStatus === 'pending') { reqBadge = `<span class="cc-req-badge req-badge-pending">PENDING</span>`; cardStatusCls = 'has-pending'; }
+  else if (s.restoredStatus === 'applied') { reqBadge = `<span class="cc-req-badge req-badge-applied">✓ APPLIED</span>`; cardStatusCls = 'has-applied'; }
+  const abilityStats = getAbilityStats(c.name);
+  let abilityBadge = '';
+  if (abilityStats === null) { abilityBadge = `<span class="cc-ability ab-none">NO ABILITY</span>`; }
+  else if (abilityStats === undefined) { abilityBadge = `<span class="cc-ability ab-none">UNKNOWN</span>`; }
+  else { const labels = abilityStats.map(st => st.toUpperCase().slice(0,3)).join('+'); const cls = abilityStats.length > 1 ? 'ab-multi' : `ab-${abilityStats[0].slice(0,3)==='acc'?'acc':abilityStats[0].slice(0,3)==='spe'?'spd':abilityStats[0].slice(0,3)==='dod'?'dod':'ele'}`; abilityBadge = `<span class="cc-ability ${cls}">${labels}</span>`; }
+  const imgHtml = imgSrc ? `<img class="cc-img" src="${imgSrc}" alt="${c.name}" onerror="this.style.display='none'">` : `<div class="cc-img-placeholder">?</div>`;
+  const chipHtml = STATS.map(st => { const v = s.vals[st.key]; const litCls = v > 0 ? st.chipCls : ''; const lbl = v > 0 ? `${st.label.slice(0,3)}:${v}` : st.label.slice(0,3); return `<span class="css-chip ${litCls}">${lbl}</span>`; }).join('');
+  const bodyImgHtml = imgSrc ? `<img class="cc-body-img" src="${imgSrc}" alt="${c.name}" onerror="this.outerHTML='<div class=cc-body-img-placeholder>#${c.id}</div>'">` : `<div class="cc-body-img-placeholder"><span style="font-size:16px">👤</span><span>#${c.id}</span></div>`;
+  const statCells = STATS.map(st => {
+    const v = s.vals[st.key];
+    const isAbility = abilityStats && abilityStats.includes(st.key);
+    const litCls = (s.mode === 'click' && v > 0) ? 'lit' : '';
+    const abilityCls = isAbility ? 'is-ability' : '';
+    const subLabel = isAbility ? '<div class="sg-sub">ABILITY</div>' : '';
+    if (s.mode === 'click') {
+      return `<div class="sg-cell mode-click ${st.cls} ${litCls} ${abilityCls}" onclick="clickToggleStat('${c.id}','${st.key}')" title="Click to toggle (max 2)">
+        <div class="sg-icon">${st.icon}</div><div class="sg-label-block"><div class="sg-label">${st.label}</div>${subLabel}</div>
+        <div class="sg-val-wrap"><div class="sg-val">${v > 0 ? v : '—'}</div></div><div class="sg-spinner"></div></div>`;
+    } else {
+      return `<div class="sg-cell mode-manual ${st.cls} ${abilityCls}" title="Manual 0–5">
+        <div class="sg-icon">${st.icon}</div><div class="sg-label-block"><div class="sg-label">${st.label}</div>${subLabel}</div>
+        <div class="sg-val-wrap"></div>
+        <div class="sg-spinner">
+          <button class="spin-btn" onclick="spinnerChange('${c.id}','${st.key}',-0.1);event.stopPropagation()">−</button>
+          <input class="spin-input" id="spin-${c.id}-${st.key}" type="number" value="${v}" min="0" max="5" step="0.1" oninput="spinnerInput('${c.id}','${st.key}',this.value)" onclick="event.stopPropagation()">
+          <button class="spin-btn" onclick="spinnerChange('${c.id}','${st.key}',0.1);event.stopPropagation()">+</button>
+        </div></div>`;
+    }
+  }).join('');
+  return `<div class="cmd-card ${activeCls} ${expandCls} ${cardStatusCls}" id="card-${c.id}">
+    <div class="cc-head" onclick="toggleExpand('${c.id}')">
+      <div class="cc-check" onclick="toggleSelect('${c.id}');event.stopPropagation()"><span class="cc-tick">✓</span></div>
+      ${imgHtml}<div class="cc-id">#${c.id}</div>
+      <div class="cc-name-block"><div class="cc-name">${c.name}</div>${skillName?`<div class="cc-skill">${skillName}</div>`:''}</div>
+      ${abilityBadge}${reqBadge}
+      <div class="cc-stat-summary">${chipHtml}</div>
+      <div class="cc-var ${vCls}">${vTxt}</div>
+      <div class="cc-arrow">▼</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-body-left">${bodyImgHtml}<div class="cc-body-id">#${c.id}</div>${abilityBadge}</div>
+      <div class="cc-body-right">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <div class="mode-toggle-row">
+            <span class="mode-label">MODE:</span>
+            <div class="mode-toggle-btns">
+              <button class="mtb ${s.mode==='click'?'active-mode':''}" onclick="setMode('${c.id}','click');event.stopPropagation()">CLICK</button>
+              <button class="mtb ${s.mode==='manual'?'active-mode':''}" onclick="setMode('${c.id}','manual');event.stopPropagation()">MANUAL</button>
+            </div>
+            <span class="mode-label" style="margin-left:8px;opacity:.6">${s.mode==='click'?'tap = toggle 5':'0–5, step 0.1'}</span>
+          </div>
+          <div class="cc-actions">
+            <button class="btn btn-gold btn-xs" onclick="applySmartOne('${c.id}');event.stopPropagation()">↺ SMART</button>
+            <button class="btn btn-red btn-xs" onclick="resetOne('${c.id}');event.stopPropagation()">✕ RESET</button>
+            <button class="btn btn-cyan btn-sm" onclick="generateOne('${c.id}');event.stopPropagation()">⚡ SET</button>
+          </div>
+        </div>
+        <div class="stat-grid">${statCells}</div>
+        <div class="cc-stat-info" id="si-${c.id}">${buildInfoText(c.id)}</div>
+        <div id="cwarn-${c.id}" class="warn-msg"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function refreshCard(id) { const c = commanders.find(x => x.id === id); const el = document.getElementById('card-' + id); if (!c || !el) return; const tmp = document.createElement('div'); tmp.innerHTML = buildCard(c); el.replaceWith(tmp.firstChild); }
+function toggleExpand(id) { state[id].expanded = !state[id].expanded; refreshCard(id); }
+function toggleSelect(id) { state[id].selected = !state[id].selected; refreshCard(id); updateBadge(); }
+function resetOne(id) { state[id].vals = {accuracy:0,speed:0,dodge:0,electron:0}; state[id].clickOrder = []; state[id].mode = 'manual'; refreshCard(id); updateBadge(); }
+function applySmartOne(id) {
+  const c = commanders.find(x => x.id === id); const pair = smartPair(c.name);
+  state[id].vals = {accuracy:0,speed:0,dodge:0,electron:0};
+  if (pair) { pair.forEach(k => state[id].vals[k] = 5); state[id].clickOrder = [...pair]; }
+  else { state[id].vals.speed = 5; state[id].vals.accuracy = 5; state[id].clickOrder = ['accuracy','speed']; const w = document.getElementById('cwarn-' + id); if (w) { w.textContent = '⚠ No ability data — defaulted to SPD+ACC'; w.style.display = 'block'; setTimeout(() => w.style.display = 'none', 3000); } }
+  refreshCard(id); updateBadge();
+}
+function selectAll() { visibleIds().forEach(id => { state[id].selected = true; }); rerenderVisible(); updateBadge(); }
+function deselectAll() { visibleIds().forEach(id => { state[id].selected = false; }); rerenderVisible(); updateBadge(); }
+function collapseAll() { Object.keys(state).forEach(id => state[id].expanded = false); rerenderVisible(); }
+function visibleIds() { const q = document.getElementById('searchBox').value.toLowerCase(); return commanders.filter(c => !q || c.name.toLowerCase().includes(q) || c.id.includes(q)).map(c => c.id); }
+function rerenderVisible() { const q = document.getElementById('searchBox').value.toLowerCase(); renderCards(commanders.filter(c => !q || c.name.toLowerCase().includes(q) || c.id.includes(q))); }
+function filterCards() { rerenderVisible(); }
+function updateBadge() {
+  const n = Object.values(state).filter(s => s.selected).length;
+  document.getElementById('selBadge').textContent = n;
+  const configured = Object.entries(state).filter(([,s]) => s.selected && Object.values(s.vals).some(v => v > 0)).length;
+  const sel = Object.values(state).filter(s => s.selected).length;
+  document.getElementById('configCount').textContent = sel ? `${configured}/${sel} configured` : '';
+}
+
+function buildSetCmd(id) { const v = state[id].vals; return `/setcommanderstats ${id} ${Math.round(v.accuracy*10)} ${Math.round(v.dodge*10)} ${Math.round(v.speed*10)} ${Math.round(v.electron*10)}`; }
+
+function generateOne(id) {
+  const w = document.getElementById('cwarn-' + id); if (w) w.style.display = 'none';
+  if (!Object.values(state[id].vals).some(v => v > 0)) { if (w) { w.textContent = '⚠ Configure at least 1 stat first.'; w.style.display = 'block'; } return; }
+  const total = statTotal(id);
+  if (total !== 10) { if (w) { w.textContent = `⚠ Total stats = ${total}/10 — must equal exactly 10.`; w.style.display = 'block'; } return; }
+  if (statsMatchExisting(id)) { const status = playerRequests[id]?.status; const msg = status === 'applied' ? '⚠ These stats are already applied.' : '⚠ A pending request with these stats already exists.'; if (w) { w.textContent = msg; w.style.display = 'block'; } return; }
+  const c = commanders.find(x => x.id === id);
+  lastGeneratedResults = [{id, cmd: buildSetCmd(id), name: c.name}];
+  replaceOutput(lastGeneratedResults);
+}
+
+function generateAll() {
+  const warn = document.getElementById('genWarn'); warn.style.display = 'none';
+  const selected = Object.entries(state).filter(([,s]) => s.selected);
+  if (!selected.length) { warn.textContent = '⚠ No commanders selected.'; warn.style.display = 'block'; return; }
+  const unconfigured = selected.filter(([,s]) => !Object.values(s.vals).some(v => v > 0));
+  if (unconfigured.length) { warn.textContent = `⚠ No stats set for: ${unconfigured.map(([id]) => commanders.find(c => c.id === id)?.name).join(', ')}`; warn.style.display = 'block'; return; }
+  const notExact = selected.filter(([id]) => statTotal(id) !== 10);
+  if (notExact.length) { warn.textContent = `⚠ Stats must total exactly 10 for: ${notExact.map(([id]) => { const c = commanders.find(x => x.id === id); return `${c.name} (${statTotal(id)}/10)`; }).join(', ')}`; warn.style.display = 'block'; return; }
+  const toGenerate = selected.filter(([id]) => !statsMatchExisting(id));
+  const skippedCount = selected.length - toGenerate.length;
+  if (!toGenerate.length) { warn.textContent = '⚠ All selected commanders already have these stats saved.'; warn.style.display = 'block'; return; }
+  if (skippedCount > 0) { warn.textContent = `ℹ ${skippedCount} commander${skippedCount!==1?'s':''} skipped — stats unchanged.`; warn.style.display = 'block'; }
+  lastGeneratedResults = toGenerate.map(([id]) => { const c = commanders.find(x => x.id === id); return {id, cmd: buildSetCmd(id), name: c.name}; });
+  replaceOutput(lastGeneratedResults);
+}
+
+function replaceOutput(results) {
+  const list = document.getElementById('outList');
+  const panel = document.getElementById('outPanel');
+  panel.style.display = 'block'; list.innerHTML = '';
+  results.forEach(r => {
+    const safeCmd = r.cmd.replace(/'/g, "\\'");
+    const div = document.createElement('div');
+    div.className = 'out-entry';
+    div.innerHTML = `<span class="out-tag tag-set">SET</span><span class="out-cmd">${r.cmd}</span><span class="out-name">${r.name}</span><button class="copy-btn" onclick="copyOne(this,'${safeCmd}')">COPY</button>`;
+    list.appendChild(div);
+  });
+  document.getElementById('outBadge').textContent = results.length;
+  document.getElementById('saveReqBtn').style.display = 'inline-flex';
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function copyOne(btn, text) { navigator.clipboard.writeText(text).then(() => { btn.textContent = '✓ OK'; btn.classList.add('ok'); setTimeout(() => { btn.textContent = 'COPY'; btn.classList.remove('ok'); }, 1400); }); }
+function copyAll() {
+  const cmds = [...document.querySelectorAll('.out-entry .out-cmd')].map(e => e.textContent).join('\n');
+  if (!cmds) { showToast('Nothing to copy', 'error'); return; }
+  navigator.clipboard.writeText(cmds).then(() => {
+    const btn = event.target; const orig = btn.textContent; btn.textContent = '✓ ALL COPIED'; setTimeout(() => btn.textContent = orig, 1600);
+    document.querySelectorAll('.out-entry').forEach(e => e.classList.add('was-copied'));
+  });
+}
+
+function clearAll() {
+  const bi = document.getElementById('bulletinInput');
+  if (bi) { bi.value = ''; bi.placeholder = 'Paste bulletin data here — either format works:\n\nOld format:  [Bulletin]: 1337: Eva (Variance: -1)\nNew format:  [Bulletin]:   [1337] Eva — variance: -1'; }
+  const ps = document.getElementById('parseStatus'); if (ps) ps.textContent = '';
+  const fb = document.getElementById('fmtBadge'); if (fb) fb.style.display = 'none';
+  const rn = document.getElementById('restoredNotice'); if (rn) rn.style.display = 'none';
+  ['cmdPanel','genPanel','outPanel'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  const ol = document.getElementById('outList'); if (ol) ol.innerHTML = '<div class="empty-state">// AWAITING COMMAND GENERATION</div>';
+  const srb = document.getElementById('saveReqBtn'); if (srb) srb.style.display = 'none';
+  commanders = []; state = []; lastGeneratedResults = [];
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  setLoading(false);
+  document.getElementById('loginScreen').classList.add('active');
+  document.getElementById('loginGameId').addEventListener('keydown', e => { if (e.key === 'Enter') checkGameId(); });
+});
+</script>
+</body>
+</html>

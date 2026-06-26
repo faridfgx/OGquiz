@@ -242,6 +242,18 @@
               <button class="mode-toggle-btn active" id="qModeRandom" onclick="setQuizQMode('random')">🎲 RANDOM FROM BANK</button>
               <button class="mode-toggle-btn" id="qModeHandpick" onclick="setQuizQMode('handpick')">✋ HAND-PICK QUESTIONS</button>
             </div>
+
+            <!-- CATEGORY FILTER (random mode only) -->
+            <div id="categoryFilterPanel" style="margin-top:12px;padding:12px 14px;background:rgba(191,95,255,0.05);border:1px solid rgba(191,95,255,0.18);border-radius:4px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div style="font-size:9px;letter-spacing:2px;color:var(--purple);">📂 QUESTION CATEGORIES</div>
+                <button onclick="toggleAllCategories(true)"  style="font-size:9px;padding:2px 8px;border:1px solid rgba(191,95,255,0.3);background:rgba(191,95,255,0.1);color:var(--purple);border-radius:2px;cursor:pointer;letter-spacing:1px;">ALL</button>
+                <button onclick="toggleAllCategories(false)" style="font-size:9px;padding:2px 8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text2);border-radius:2px;cursor:pointer;letter-spacing:1px;">NONE</button>
+                <span id="catPoolCount" style="margin-left:auto;font-size:9px;color:var(--text2);letter-spacing:1px;"></span>
+              </div>
+              <div id="categoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px;"></div>
+            </div>
+
             <div id="handPickStatus" style="display:none;padding:10px 12px;background:rgba(191,95,255,0.06);border:1px solid rgba(191,95,255,0.2);border-radius:3px;font-size:10px;color:var(--purple);">
               <span id="handPickCount">0 questions selected</span>
               <button class="btn btn-purple btn-sm" style="margin-left:10px;" onclick="openMcqModal()">✎ EDIT SELECTION</button>
@@ -703,6 +715,7 @@ let consolationPrize = '';
 let quizQMode = 'random'; // 'random' | 'handpick'
 let handPickedQuestions = []; // questions admin hand-picked
 let mcqPickerSelected = new Set(); // indices into QUIZ_BANK
+let selectedCategories = new Set(); // category keys for random mode
 let activeQuizId = null;
 let quizQuestions = [];
 let quizAnswers = [];
@@ -714,6 +727,35 @@ let quizChannel = null;
 
 let activeMemoryId = null;
 let memoryChannel = null;
+
+
+
+// ── Tab visibility / focus anti-cheat ──────────────────
+let quizTabSwitches = 0;
+let quizVisibilityHandler = null;
+
+function startTabWatcher() {
+  stopTabWatcher();
+  quizTabSwitches = 0;
+  quizVisibilityHandler = () => {
+    if (document.hidden) {
+      quizTabSwitches++;
+      // Persist so a refresh also restores the count
+      try {
+        const s = loadQuizSession();
+        if (s) { s.tabSwitches = quizTabSwitches; localStorage.setItem(quizStorageKey(), JSON.stringify(s)); }
+      } catch(e) {}
+    }
+  };
+  document.addEventListener('visibilitychange', quizVisibilityHandler);
+}
+
+function stopTabWatcher() {
+  if (quizVisibilityHandler) {
+    document.removeEventListener('visibilitychange', quizVisibilityHandler);
+    quizVisibilityHandler = null;
+  }
+}
 
 // ══════════════════════════════════════════════════════
 // INIT
@@ -1316,9 +1358,12 @@ document.getElementById('quizTimerPicker').innerHTML = renderTimerPickerHtml('va
   quizQMode = 'random';
   handPickedQuestions = [];
   mcqPickerSelected = new Set();
+  // Default: all categories selected
+  selectedCategories = new Set(QUIZ_CATEGORIES.map(c => c.key));
   renderQuizQCountBtns();
   renderQuizPrizeGrid();
   setQuizQMode('random');
+  renderCategoryGrid();
 }
 function setQuizQMode(mode) {
   quizQMode = mode;
@@ -1326,20 +1371,88 @@ function setQuizQMode(mode) {
   document.getElementById('qModeHandpick').classList.toggle('active', mode === 'handpick');
   const status = document.getElementById('handPickStatus');
   const countBtns = document.getElementById('quizQCountBtns');
+  const catPanel = document.getElementById('categoryFilterPanel');
   if (mode === 'handpick') {
     status.style.display = 'block';
+    catPanel.style.display = 'none';
     countBtns.style.opacity = '0.3';
     countBtns.style.pointerEvents = 'none';
     updateHandPickStatus();
   } else {
     status.style.display = 'none';
+    catPanel.style.display = 'block';
     countBtns.style.opacity = '';
     countBtns.style.pointerEvents = '';
+    updateCatPoolCount();
   }
 }
 function updateHandPickStatus() {
   const n = mcqPickerSelected.size;
   document.getElementById('handPickCount').textContent = n > 0 ? `${n} question${n!==1?'s':''} selected` : 'No questions selected — click EDIT SELECTION';
+}
+
+// ── Category filter (random mode) ──────────────────────
+function renderCategoryGrid() {
+  const grid = document.getElementById('categoryGrid');
+  if (!grid || typeof QUIZ_CATEGORIES === 'undefined') return;
+  grid.innerHTML = '';
+  QUIZ_CATEGORIES.forEach(cat => {
+    const count = QUIZ_BANK.filter(q => q.category === cat.key).length;
+    const active = selectedCategories.has(cat.key);
+    const card = document.createElement('div');
+    card.id = 'catcard-' + cat.key;
+    card.style.cssText = `
+      display:flex;align-items:center;gap:9px;padding:8px 10px;
+      border-radius:3px;cursor:pointer;transition:all .15s;
+      border:1px solid ${active ? 'rgba(191,95,255,0.45)' : 'rgba(255,255,255,0.07)'};
+      background:${active ? 'rgba(191,95,255,0.1)' : 'rgba(255,255,255,0.02)'};
+    `;
+    card.innerHTML = `
+      <div style="font-size:16px;line-height:1;">${cat.icon}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:10px;letter-spacing:1px;color:${active ? 'var(--purple)' : 'var(--text2)'};">${cat.label}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:1px;">${cat.desc}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-family:'Orbitron',monospace;font-size:11px;color:${active ? 'var(--purple)' : 'var(--text3)'};">${count}</div>
+        <div style="font-size:8px;color:var(--text3);letter-spacing:1px;">QS</div>
+      </div>
+      <div style="width:14px;height:14px;border-radius:2px;border:1px solid ${active ? 'var(--purple)' : 'rgba(255,255,255,0.15)'};background:${active ? 'var(--purple)' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#fff;">
+        ${active ? '✓' : ''}
+      </div>
+    `;
+    card.onclick = () => toggleCategory(cat.key);
+    grid.appendChild(card);
+  });
+  updateCatPoolCount();
+}
+
+function toggleCategory(key) {
+  if (selectedCategories.has(key)) {
+    if (selectedCategories.size === 1) return; // keep at least one
+    selectedCategories.delete(key);
+  } else {
+    selectedCategories.add(key);
+  }
+  renderCategoryGrid();
+}
+
+function toggleAllCategories(selectAll) {
+  if (selectAll) {
+    QUIZ_CATEGORIES.forEach(c => selectedCategories.add(c.key));
+  } else {
+    // Keep only first category so pool is never empty
+    selectedCategories = new Set([QUIZ_CATEGORIES[0].key]);
+  }
+  renderCategoryGrid();
+}
+
+function updateCatPoolCount() {
+  const el = document.getElementById('catPoolCount');
+  if (!el || typeof QUIZ_BANK === 'undefined') return;
+  const pool = QUIZ_BANK.filter(q => selectedCategories.has(q.category)).length;
+  el.textContent = `${pool} questions in pool`;
+  el.style.color = pool >= quizQCount ? 'var(--green)' : 'var(--orange)';
 }
 function renderQuizQCountBtns() {
   const c = document.getElementById('quizQCountBtns'); if(!c) return; c.innerHTML = '';
@@ -1353,6 +1466,7 @@ function renderQuizQCountBtns() {
       b.classList.add('active');
       document.getElementById('quizSetupBadge').textContent = `${n} QUESTIONS · TOP 10 WIN`;
       document.getElementById('quizSetupWarn').textContent = `⚠ SET ALL 10 PRIZES BEFORE PUBLISHING`;
+      updateCatPoolCount();
     };
     c.appendChild(b);
   });
@@ -1395,7 +1509,13 @@ async function publishQuiz() {
     }
     selected = [...mcqPickerSelected].map(i => QUIZ_BANK[i]);
   } else {
-    const shuffledBank = shuffle([...QUIZ_BANK]);
+    // Filter bank by selected categories
+    const pool = QUIZ_BANK.filter(q => selectedCategories.has(q.category));
+    if (pool.length < quizQCount) {
+      warn.textContent = `⚠ ONLY ${pool.length} QUESTIONS IN SELECTED CATEGORIES — REDUCE QUESTION COUNT OR ADD MORE CATEGORIES`;
+      warn.style.display = 'block'; setTimeout(()=>warn.style.display='none',4000); return;
+    }
+    const shuffledBank = shuffle([...pool]);
     selected = shuffledBank.slice(0, quizQCount);
   }
 
@@ -1413,6 +1533,7 @@ async function publishQuiz() {
     questions: selected,
     q_count: actualCount,
     q_mode: quizQMode,
+    q_categories: quizQMode === 'random' ? [...selectedCategories] : null,
     prizes: quizPrizes,
     consolation_prize: consolationPrize || '',
     active: true, revealed: false,
@@ -1572,7 +1693,8 @@ function renderQuizDashboard(scores) {
       <div class="lb-rank ${rankClass}" style="${rankClass ? '' : `color:${pal.accent};font-size:13px;`}">${i+1}</div>
       <div>
         <div class="lb-name">${s.username}</div>
-        <div class="lb-time">ID: ${s.game_user_id} · ${timeSec}s</div>
+        
+<div class="lb-time">ID: ${s.game_user_id} · ${timeSec}s${s.tab_switches > 0 ? ` · <span style="color:var(--danger);">⚠ ${s.tab_switches} tab switch${s.tab_switches!==1?'es':''}</span>` : ''}</div>
       </div>
       <div style="text-align:right;">
         <div class="lb-score">${s.score}/${totalQ}</div>
@@ -1692,13 +1814,32 @@ async function loadPlayerQuiz(gd) {
   quizScore = 0;
   quizSubmitted = false;
 
+  // ── Restore session if the player already started (page refresh) ──
+  const savedSession = loadQuizSession();
+  if (savedSession && savedSession.startTime) {
+    quizStartTime = savedSession.startTime;
+    quizCurrent   = savedSession.current  ?? 0;
+    quizScore     = savedSession.score    ?? 0;
+    quizAnswers   = savedSession.answers  ?? Array(totalQ).fill(null);
+  }
+
   document.getElementById('quizStatusBadge').textContent = `ACTIVE · ${totalQ} QUESTIONS`;
     if (gd.ends_at) {
       const badge = document.getElementById('quizStatusBadge');
       startPlayerTimer(badge, gd.ends_at, () => loadPlayerView());
     }
-  // Show prize table + start button first
-  showQuizPrizeTable(gd, totalQ);
+
+  // If a session was restored, resume mid-quiz instead of showing the start screen
+  if (savedSession && savedSession.startTime) {
+    if (quizCurrent < quizQuestions.length) {
+      renderQuizQuestion();
+    } else {
+      finishQuiz();
+    }
+  } else {
+    // Show prize table + start button first
+    showQuizPrizeTable(gd, totalQ);
+  }
 
   // Subscribe to game end
   if (quizChannel) sb.removeChannel(quizChannel);
@@ -1754,9 +1895,65 @@ function showQuizPrizeTable(gd, totalQ) {
     </div>`;
 }
 
+function quizStorageKey() {
+  return `quiz_session_${activeQuizId}_${currentUser.gameId}`;
+}
+
+function saveQuizSession() {
+  const session = {
+    startTime:  quizStartTime,
+    current:    quizCurrent,
+    score:      quizScore,
+    answers:    quizAnswers,
+    tabSwitches: quizTabSwitches
+  };
+  try { localStorage.setItem(quizStorageKey(), JSON.stringify(session)); } catch(e) {}
+}
+
+function loadQuizSession() {
+  try {
+    const raw = localStorage.getItem(quizStorageKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+function clearQuizSession() {
+  try { localStorage.removeItem(quizStorageKey()); } catch(e) {}
+}
+
 function startQuiz() {
-  quizStartTime = Date.now();
+  const existing = loadQuizSession();
+  if (existing && existing.startTime) {
+    quizStartTime   = existing.startTime;
+    quizTabSwitches = existing.tabSwitches ?? 0;
+  } else {
+    quizStartTime   = Date.now();
+    quizTabSwitches = 0;
+    // Shuffle questions once per player-session (seeded by gameId + gameUserId)
+    quizQuestions = shuffleArray([...quizQuestions]);
+    // Shuffle choices within each question
+    quizQuestions = quizQuestions.map(q => shuffleOptions(q));
+  }
+  saveQuizSession();
+  startTabWatcher();
   renderQuizQuestion();
+}
+
+// Fisher-Yates — pure random per player
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Returns a new question object with options shuffled, correct answer preserved
+function shuffleOptions(q) {
+  const shuffled = shuffleArray(q.options);
+  return { ...q, options: shuffled };
+  // q.answer is still the literal string — it stays correct regardless of order
 }
 
 function renderQuizQuestion() {
@@ -1807,6 +2004,11 @@ function answerQuiz(optionIdx) {
   quizAnswers[quizCurrent] = selected;
   if (isCorrect) quizScore++;
 
+  // Increment BEFORE saving so a refresh resumes at the NEXT question,
+  // not re-plays the one just answered (which caused the duplicate-score bug)
+  quizCurrent++;
+  saveQuizSession();
+
   const btns = document.querySelectorAll('.quiz-opt');
   btns.forEach((btn, i) => {
     btn.disabled = true;
@@ -1820,7 +2022,7 @@ function answerQuiz(optionIdx) {
   fb.innerHTML = isCorrect ? `✓ CORRECT! +1 point` : `✗ INCORRECT — Correct: <strong>${q.answer}</strong>`;
 
   setTimeout(() => {
-    quizCurrent++;
+    // quizCurrent already incremented above — don't increment again
     if (quizCurrent < quizQuestions.length) {
       renderQuizQuestion();
     } else {
@@ -1831,7 +2033,9 @@ function answerQuiz(optionIdx) {
 
 async function finishQuiz() {
   quizSubmitted = true;
+  stopTabWatcher();
   const timeTaken = Date.now() - quizStartTime;
+  clearQuizSession();
   const totalQ = quizQuestions.length;
 
   document.getElementById('quizPlayerBody').innerHTML = `<div class="quiz-score-display">
@@ -1843,12 +2047,13 @@ async function finishQuiz() {
   </div>`;
 
   const { error } = await sb.from('constellation_claims').insert({
-    game_id: activeQuizId,
-    constellation_index: 0,
-    username: currentUser.username,
-    game_user_id: currentUser.gameId,
-    score: quizScore,
-    time_taken: timeTaken
+    game_id:              activeQuizId,
+    constellation_index:  0,
+    username:             currentUser.username,
+    game_user_id:         currentUser.gameId,
+    score:                quizScore,
+    time_taken:           timeTaken,
+    tab_switches:         quizTabSwitches   // ← stored in DB for admin review
   });
 
   if (error && !error.message.includes('duplicate')) {
@@ -1857,7 +2062,7 @@ async function finishQuiz() {
   }
 
   const { data: gameRow } = await sb.from('constellation_games').select('*').eq('id', activeQuizId).single();
-  const { data: scores } = await sb.from('constellation_claims').select('*').eq('game_id', activeQuizId).order('score', { ascending: false });
+  const { data: scores }  = await sb.from('constellation_claims').select('*').eq('game_id', activeQuizId).order('score', { ascending: false });
 
   document.getElementById('playerQuizResultPanel').style.display = 'block';
   showQuizResults({ score: quizScore, time_taken: timeTaken }, gameRow?.data, scores || []);
@@ -2182,18 +2387,9 @@ function drawRewardsOnly(){const count=N;const rewardPalOrder=shuffledPaletteInd
 // ══════════════════════════════════════════════════════
 // MCQ PICKER MODAL
 // ══════════════════════════════════════════════════════
-const MCQ_CATEGORIES = ['ALL', 'STATS', 'SKILL NAMES', 'COMBO SKILLS', 'MECHANICS', 'LORE'];
+// MCQ picker uses QUIZ_CATEGORIES from mcqdb.js — no separate list needed
 function categorizeMcq(q) {
-  const t = q.question.toLowerCase();
-  if (t.includes('what stats affect')) return 'STATS';
-  if (t.includes('signature skill') || t.includes('name of') && t.includes("'s ")) return 'SKILL NAMES';
-  if (t.includes('combo commander') || t.includes('skill name for \'')) return 'COMBO SKILLS';
-  if (t.includes('lore') || t.includes('childhood') || t.includes('nickname') || t.includes('born') ||
-      t.includes('graduated') || t.includes('career') || t.includes('family') || t.includes('age') ||
-      t.includes('reputation') || t.includes('fashion') || t.includes('trait') || t.includes('background') ||
-      t.includes('twin heroes') || t.includes('witchdoctor') || t.includes('wildcat') || t.includes('black hole') ||
-      t.includes('eyes') || t.includes('pirate slayer') || t.includes('shaba') && t.includes('old')) return 'LORE';
-  return 'MECHANICS';
+  return q.category || 'ability_mechanics';
 }
 let mcqActiveCategory = 'ALL';
 
@@ -2215,12 +2411,22 @@ function confirmMcqSelection() {
 }
 function renderMcqFilterBtns() {
   const c = document.getElementById('mcqFilterBtns'); c.innerHTML = '';
-  MCQ_CATEGORIES.forEach(cat => {
+
+  // ALL button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'mcq-filter-btn' + (mcqActiveCategory === 'ALL' ? ' active' : '');
+  allBtn.textContent = `ALL (${QUIZ_BANK.length})`;
+  allBtn.onclick = () => { mcqActiveCategory = 'ALL'; renderMcqFilterBtns(); renderMcqList(); };
+  c.appendChild(allBtn);
+
+  // One button per QUIZ_CATEGORY
+  QUIZ_CATEGORIES.forEach(cat => {
+    const count = QUIZ_BANK.filter(q => q.category === cat.key).length;
+    if (!count) return; // skip empty categories
     const b = document.createElement('button');
-    b.className = 'mcq-filter-btn' + (cat === mcqActiveCategory ? ' active' : '');
-    const count = cat === 'ALL' ? QUIZ_BANK.length : QUIZ_BANK.filter(q => categorizeMcq(q) === cat).length;
-    b.textContent = `${cat} (${count})`;
-    b.onclick = () => { mcqActiveCategory = cat; renderMcqFilterBtns(); renderMcqList(); };
+    b.className = 'mcq-filter-btn' + (mcqActiveCategory === cat.key ? ' active' : '');
+    b.textContent = `${cat.icon} ${cat.label} (${count})`;
+    b.onclick = () => { mcqActiveCategory = cat.key; renderMcqFilterBtns(); renderMcqList(); };
     c.appendChild(b);
   });
 }
@@ -2232,7 +2438,7 @@ function renderMcqList() {
   document.getElementById('mcqPickStatus').textContent = selected > 0 ? `${selected} question${selected!==1?'s':''} selected — click USE SELECTED to confirm` : 'Click questions to select them';
 
   const filtered = QUIZ_BANK.map((q, i) => ({ q, i }))
-    .filter(({ q }) => mcqActiveCategory === 'ALL' || categorizeMcq(q) === mcqActiveCategory)
+    .filter(({ q }) => mcqActiveCategory === 'ALL' || q.category === mcqActiveCategory)
     .filter(({ q }) => !search || q.question.toLowerCase().includes(search) || q.answer.toLowerCase().includes(search));
 
   if (!filtered.length) {
@@ -2246,7 +2452,7 @@ function renderMcqList() {
     row.innerHTML = `<div class="mcq-q-check ${isSel ? 'checked' : ''}">${isSel ? '✓' : ''}</div>
       <div>
         <div class="mcq-q-text">${q.question}</div>
-        <div class="mcq-q-meta">Answer: <span style="color:var(--green);">${q.answer}</span> · ${categorizeMcq(q)}</div>
+        <div class="mcq-q-meta">Answer: <span style="color:var(--green);">${q.answer}</span> · ${QUIZ_CATEGORIES.find(c => c.key === q.category)?.label || q.category}</div>
       </div>`;
     row.onclick = () => {
       if (mcqPickerSelected.has(i)) { mcqPickerSelected.delete(i); }

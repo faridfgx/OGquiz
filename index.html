@@ -1104,10 +1104,14 @@ async function loadPlayerHistory() {
       const totalQ  = gd?.q_count || gd?.questions?.length || '?';
       const prizes  = gd?.prizes || [];
       const consol  = gd?.consolation_prize || '';
-      scoreHtml = `<span style="color:var(--purple);">${claim.score ?? '?'}/${totalQ}</span>`;
       const ranked = (claimsByGame[game.id] || []).slice()
         .sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
       const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
+      const tiedWithOthers = (claimsByGame[game.id] || []).filter(c => c.score === claim.score).length > 1;
+      const myTimeSec = claim.time_taken ? Math.round(claim.time_taken/1000)+'s' : '?';
+      scoreHtml = tiedWithOthers
+        ? `<span style="color:var(--purple);">${claim.score ?? '?'}/${totalQ}</span> <span style="color:var(--purple);font-weight:700;">· ${myTimeSec}</span>`
+        : `<span style="color:var(--purple);">${claim.score ?? '?'}/${totalQ}</span>`;
       const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
       prizeHtml = myPrize
         ? `<span style="color:var(--gold);">🏆 ${myPrize}</span>`
@@ -1134,7 +1138,12 @@ async function loadPlayerHistory() {
       const total  = gd?.count || gd?.commanders?.length || '?';
       const prizes = gd?.prizes || [];
       const consol = gd?.consolation_prize || '';
-      scoreHtml = `<span style="color:#ffa500;">${claim.score ?? '?'}/${typeof total === 'number' ? total * 2 : '?'} pts</span>`;
+      const maxPts = typeof total === 'number' ? total * 2 : '?';
+      const tiedWithOthers = (claimsByGame[game.id] || []).filter(c => c.score === claim.score).length > 1;
+      const myTimeSec = claim.time_taken ? Math.round(claim.time_taken/1000)+'s' : '?';
+      scoreHtml = tiedWithOthers
+        ? `<span style="color:#ffa500;">${claim.score ?? '?'}/${maxPts} pts</span> <span style="color:#ffa500;font-weight:700;">· ${myTimeSec}</span>`
+        : `<span style="color:#ffa500;">${claim.score ?? '?'}/${maxPts} pts</span>`;
       const ranked = (claimsByGame[game.id] || []).slice()
         .sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
       const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
@@ -1739,12 +1748,16 @@ function renderQuizDashboard(scores) {
     const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
     const prize = i < quizPrizes.length ? quizPrizes[i] : null;
     const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
+    const tied = (scores[i-1] && scores[i-1].score === s.score) || (scores[i+1] && scores[i+1].score === s.score);
+    const timeDisplay = tied
+      ? `<span style="color:${pal.accent};font-weight:700;">${timeSec}s</span>`
+      : `${timeSec}s`;
     html += `<div class="leaderboard-row" style="border-color:${i < QUIZ_TOP_N ? 'rgba(191,95,255,0.15)' : 'rgba(255,255,255,0.04)'}">
       <div class="lb-rank ${rankClass}" style="${rankClass ? '' : `color:${pal.accent};font-size:13px;`}">${i+1}</div>
       <div>
         <div class="lb-name">${s.username}</div>
         
-<div class="lb-time">ID: ${s.game_user_id} · ${timeSec}s${s.tab_switches > 0 ? ` · <span style="color:var(--danger);">⚠ ${s.tab_switches} tab switch${s.tab_switches!==1?'es':''}</span>` : ''}</div>
+<div class="lb-time">ID: ${s.game_user_id} · ${timeDisplay}${s.tab_switches > 0 ? ` · <span style="color:var(--danger);">⚠ ${s.tab_switches} tab switch${s.tab_switches!==1?'es':''}</span>` : ''}</div>
       </div>
       <div style="text-align:right;">
         <div class="lb-score">${s.score}/${totalQ}</div>
@@ -2211,11 +2224,15 @@ async function showQuizResults(myResult, gd, allScores) {
     const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
     const prize = i < prizes.length ? prizes[i] : null;
     const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
+    const tied = (allScores[i-1] && allScores[i-1].score === s.score) || (allScores[i+1] && allScores[i+1].score === s.score);
+    const timeDisplay = tied
+      ? `<span style="color:var(--purple);font-weight:700;">${timeSec}s</span>`
+      : `${timeSec}s`;
     html += `<div class="leaderboard-row" style="${isMe ? 'background:rgba(191,95,255,0.08);' : ''}${i < prizes.length ? '' : 'opacity:0.6;'}">
       <div class="lb-rank ${rankClass}" style="${rankClass ? '' : 'color:var(--text2);font-size:13px;'}">${i+1}</div>
       <div>
         <div class="lb-name" style="${isMe ? 'color:var(--purple);' : ''}">${s.username}${isMe ? ' ◀ YOU' : ''}</div>
-        <div class="lb-time">${timeSec}s · ${s.score}/${totalQ} pts</div>
+        <div class="lb-time">${timeDisplay} · ${s.score}/${totalQ} pts</div>
       </div>
       <div style="text-align:right;">
         ${prize ? `<div class="reward-pill">${prize}</div>` : '<div style="font-size:10px;color:var(--text3);margin-top:2px;">no prize</div>'}
@@ -2664,11 +2681,16 @@ function renderHistoryQuiz(gd, claims) {
     const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
     const prize = i < prizes.length ? prizes[i] : (consolation || '—');
     const prizeColor = i < prizes.length ? 'var(--gold)' : consolation ? 'var(--orange)' : 'var(--text3)';
+    const tied = (claims[i-1] && claims[i-1].score === c.score) || (claims[i+1] && claims[i+1].score === c.score);
+    const timeSec = c.time_taken ? Math.round(c.time_taken/1000)+'s' : '—';
+    const timeCell = tied
+      ? `<span style="color:var(--purple);font-family:'Orbitron',monospace;font-weight:700;">${timeSec}</span>`
+      : `<span style="color:var(--text2);">${timeSec}</span>`;
     html += `<tr>
       <td style="font-family:'Orbitron',monospace;font-size:12px;">${rankLabel}</td>
       <td style="color:var(--text);">${c.username}<br><span style="color:var(--text3);font-size:9px;">${c.game_user_id}</span></td>
       <td style="color:var(--purple);font-family:'Orbitron',monospace;">${c.score}/${totalQ}</td>
-      <td style="color:var(--text2);font-size:10px;">${c.time_taken ? Math.round(c.time_taken/1000)+'s' : '—'}</td>
+      <td style="font-size:10px;">${timeCell}</td>
       <td style="color:${prizeColor};font-size:11px;">${prize}</td>
     </tr>`;
   });
@@ -2699,11 +2721,15 @@ function renderHistoryGuess(gd, claims) {
     const prizeColor = inTop ? '#ffa500' : consolation ? 'var(--orange)' : 'var(--text3)';
     const timeSec    = c.time_taken ? Math.round(c.time_taken / 1000) + 's' : '—';
     const maxPts     = typeof total === 'number' ? total * 2 : '?';
+    const tied = (claims[i-1] && claims[i-1].score === c.score) || (claims[i+1] && claims[i+1].score === c.score);
+    const timeCell = tied
+      ? `<span style="color:#ffa500;font-family:'Orbitron',monospace;font-weight:700;">${timeSec}</span>`
+      : `<span style="color:var(--text2);">${timeSec}</span>`;
     html += `<tr style="${inTop ? 'background:rgba(255,165,0,0.04);' : ''}">
       <td style="font-family:'Orbitron',monospace;font-size:13px;">${rankLabel}</td>
       <td style="color:var(--text);">${c.username}<br><span style="color:var(--text3);font-size:9px;font-family:'Share Tech Mono',monospace;">${c.game_user_id}</span></td>
       <td style="color:#ffa500;font-family:'Orbitron',monospace;">${c.score ?? '?'}/${maxPts}</td>
-      <td style="color:var(--text2);font-size:10px;">${timeSec}</td>
+      <td style="font-size:10px;">${timeCell}</td>
       <td style="color:${prizeColor};font-size:11px;">${prize}</td>
     </tr>`;
   });

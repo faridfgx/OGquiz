@@ -94,10 +94,10 @@ function renderMemoryDashboard(scores) {
     return;
   }
 
-  scores.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+  scores.sort((a, b) => (a.time_taken - b.time_taken));
 
   let html = `<div style="margin-bottom:14px;font-size:10px;color:var(--text2);letter-spacing:2px;">
-    ▶ ${scores.length} PLAYER(S) COMPLETED · RANKED BY PAIRS FOUND THEN SPEED
+    ▶ ${scores.length} PLAYER(S) COMPLETED · RANKED BY SPEED
   </div>
   <div style="background:var(--bg3);border:1px solid rgba(0,255,204,0.2);border-radius:4px;overflow:hidden;">`;
 
@@ -109,10 +109,10 @@ function renderMemoryDashboard(scores) {
         <div class="lb-rank" style="font-size:16px;">${rankLabel}</div>
         <div>
           <div class="lb-name">${s.username}</div>
-          <div class="lb-time">ID: ${s.game_user_id} · ${timeSec}s</div>
+          <div class="lb-time">ID: ${s.game_user_id} · ${s.score} pairs</div>
         </div>
         <div style="text-align:right;">
-          <div class="lb-score" style="color:#00ffcc;">${s.score} pairs</div>
+          <div class="lb-score" style="color:#00ffcc;">${timeSec}s</div>
         </div>
       </div>`;
   });
@@ -751,7 +751,7 @@ async function showMemoryResults(myResult, gd, allScores) {
     }
   }
 
-  allScores.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+  allScores.sort((a, b) => (a.time_taken - b.time_taken));
   const myRank = allScores.findIndex(s => s.game_user_id === currentUser.gameId) + 1;
   const prizes = gd?.prizes || memPrizes || [];
   const consolation = gd?.consolation_prize || memConsolationPrize || '';
@@ -804,10 +804,10 @@ async function showMemoryResults(myResult, gd, allScores) {
           <div class="lb-rank" style="font-size:16px;">${rankLabel}</div>
           <div>
             <div class="lb-name" style="${isMe ? 'color:#00ffcc;' : ''}">${s.username}${isMe ? ' ◀ YOU' : ''}</div>
-            <div class="lb-time">${timeSec}s · ${s.score} pairs</div>
+            <div class="lb-time">${s.score}/${MEMORY_PAIR_COUNT} pairs</div>
           </div>
           <div style="text-align:right;">
-            <div class="lb-score" style="color:#00ffcc;">${s.score}/${MEMORY_PAIR_COUNT}</div>
+            <div class="lb-score" style="color:#00ffcc;">${timeSec}s</div>
             ${prize ? `<div class="reward-pill" style="border-color:rgba(0,255,204,0.4);color:#00ffcc;">${prize}</div>` : '<div style="font-size:10px;color:var(--text3);margin-top:2px;">no prize</div>'}
           </div>
         </div>`;

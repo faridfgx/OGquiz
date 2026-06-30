@@ -475,6 +475,18 @@
       </div>
     </div>
 
+    <!-- No active event panel (mode-agnostic) -->
+    <div class="panel" id="playerNoGamePanel" style="display:none;">
+      <div class="panel-hd">
+        <div class="ph-dot" style="background:var(--text2);box-shadow:none;"></div>
+        <div class="ph-title">Event Status</div>
+        <div class="ph-badge" id="playerNoGameBadge">NO EVENT ACTIVE</div>
+      </div>
+      <div class="panel-body">
+        <div class="loading-msg" style="color:var(--danger);" id="playerNoGameMsg">NO ACTIVE EVENT — WAIT FOR ADMIN TO LAUNCH ONE.</div>
+      </div>
+    </div>
+
     <!-- Star Systems panel (giveaway) -->
     <div class="panel" id="playerStarPanel" style="display:none;">
       <div class="panel-hd">
@@ -585,7 +597,7 @@
       <div style="width:26px;height:26px;border-radius:50%;background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.4);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:11px;color:#00d4ff;flex-shrink:0;">1</div>
       <div>
         <div style="font-size:13px;color:#d8e6f5;margin-bottom:4px;"><span style="color:#00d4ff;">Username</span> — your exact Open Galaxy in-game name.</div>
-        <div style="font-size:11px;color:#4a7090;line-height:1.6;">This is the name other players see on Ranking or you Planet.</div>
+        <div style="font-size:11px;color:#4a7090;line-height:1.6;">This is the name other players see on Ranking or your Planet.</div>
       </div>
     </div>
     <div style="border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:14px;margin-bottom:14px;display:flex;gap:14px;">
@@ -1051,6 +1063,22 @@ async function loadPlayerHistory() {
     return;
   }
 
+  // Score-based modes need every player's claim (not just mine) to know my real rank
+  // and therefore which prize I actually won.
+  const scoreGameIds = participated
+    .filter(g => ['quiz', 'memory', 'guess'].includes(g.data?.mode))
+    .map(g => g.id);
+
+  const claimsByGame = {};
+  if (scoreGameIds.length) {
+    const { data: allClaims } = await sb
+      .from('constellation_claims').select('*').in('game_id', scoreGameIds);
+    (allClaims || []).forEach(c => {
+      if (!claimsByGame[c.game_id]) claimsByGame[c.game_id] = [];
+      claimsByGame[c.game_id].push(c);
+    });
+  }
+
   body.innerHTML = '';
   participated.forEach(game => {
     const gd     = game.data;
@@ -1077,29 +1105,45 @@ async function loadPlayerHistory() {
       const prizes  = gd?.prizes || [];
       const consol  = gd?.consolation_prize || '';
       scoreHtml = `<span style="color:var(--purple);">${claim.score ?? '?'}/${totalQ}</span>`;
-      // Determine rank from claim position (we don't have all scores here, just show consolation if stored)
-      prizeHtml = consol
+      const ranked = (claimsByGame[game.id] || []).slice()
+        .sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+      const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
+      const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
+      prizeHtml = myPrize
+        ? `<span style="color:var(--gold);">🏆 ${myPrize}</span>`
+        : consol
         ? `<span style="color:var(--orange);">${consol}</span>`
-        : prizes[0]
-        ? `<span style="color:var(--text2);">See prizes below</span>`
         : '';
 
     } else if (mode === 'memory') {
       const prizes = gd?.prizes || [];
       const consol = gd?.consolation_prize || '';
-      scoreHtml = `<span style="color:#00ffcc;">${claim.score ?? '?'}/${MEMORY_PAIR_COUNT} pairs</span>`;
-      prizeHtml = consol
+      const timeSec = claim.time_taken ? Math.round(claim.time_taken/1000)+'s' : '?';
+      scoreHtml = `<span style="color:#00ffcc;">${timeSec} · ${claim.score ?? '?'}/${MEMORY_PAIR_COUNT} pairs</span>`;
+      const ranked = (claimsByGame[game.id] || []).slice()
+        .sort((a, b) => (a.time_taken - b.time_taken));
+      const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
+      const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
+      prizeHtml = myPrize
+        ? `<span style="color:#00ffcc;">🏆 ${myPrize}</span>`
+        : consol
         ? `<span style="color:var(--orange);">${consol}</span>`
-        : prizes[0] ? `<span style="color:var(--text2);">See prizes below</span>` : '';
+        : '';
 
     } else if (mode === 'guess') {
       const total  = gd?.count || gd?.commanders?.length || '?';
       const prizes = gd?.prizes || [];
       const consol = gd?.consolation_prize || '';
       scoreHtml = `<span style="color:#ffa500;">${claim.score ?? '?'}/${typeof total === 'number' ? total * 2 : '?'} pts</span>`;
-      prizeHtml = consol
+      const ranked = (claimsByGame[game.id] || []).slice()
+        .sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+      const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
+      const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
+      prizeHtml = myPrize
+        ? `<span style="color:#ffa500;">🏆 ${myPrize}</span>`
+        : consol
         ? `<span style="color:var(--orange);">${consol}</span>`
-        : prizes[0] ? `<span style="color:var(--text2);">See prizes below</span>` : '';
+        : '';
     }
 
     const modeColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : 'var(--gold)';
@@ -1107,16 +1151,22 @@ async function loadPlayerHistory() {
       ? `<span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px rgba(57,255,20,0.6);flex-shrink:0;"></span>`
       : `<span style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block;flex-shrink:0;"></span>`;
 
-    // Prize table for detail section
+    // Prize table for detail section — highlight the row I actually won
     const prizes = gd?.prizes || [];
     const consol = gd?.consolation_prize || '';
+    let myRankForTable = -1;
+    if (mode !== 'giveaway') {
+      const ranked = (claimsByGame[game.id] || []).slice()
+        .sort((a, b) => mode === 'memory' ? (a.time_taken - b.time_taken) : (b.score - a.score) || (a.time_taken - b.time_taken));
+      myRankForTable = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
+    }
     let prizeTableHtml = '';
     if (prizes.length) {
       prizeTableHtml = `<div style="margin-top:10px;">
         <div style="font-size:9px;letter-spacing:2px;color:${modeColor};margin-bottom:6px;">✦ PRIZE TABLE</div>
         <div style="background:var(--bg3);border:1px solid ${modeColor}22;border-radius:3px;overflow:hidden;">
-          ${prizes.map((p,i)=>{const rl=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;return`<div style="display:flex;gap:10px;padding:6px 12px;border-bottom:1px solid ${modeColor}11;font-size:10px;"><span style="min-width:36px;color:${modeColor};">${rl}</span><span style="color:#ffe8aa;">${p}</span></div>`;}).join('')}
-          ${consol?`<div style="display:flex;gap:10px;padding:6px 12px;font-size:10px;"><span style="min-width:36px;color:var(--orange);">rest</span><span style="color:#ffe8aa;">${consol}</span></div>`:''}
+          ${prizes.map((p,i)=>{const rl=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;const isMine=(i+1)===myRankForTable;return`<div style="display:flex;gap:10px;padding:6px 12px;border-bottom:1px solid ${modeColor}11;font-size:10px;${isMine?`background:${modeColor}14;`:''}"><span style="min-width:36px;color:${modeColor};">${rl}</span><span style="color:#ffe8aa;flex:1;">${p}</span>${isMine?`<span style="color:${modeColor};font-size:9px;">◀ YOU</span>`:''}</div>`;}).join('')}
+          ${consol?(()=>{const isMine=myRankForTable>prizes.length&&myRankForTable>0;return`<div style="display:flex;gap:10px;padding:6px 12px;font-size:10px;${isMine?'background:rgba(255,107,53,0.10);':''}"><span style="min-width:36px;color:var(--orange);">rest</span><span style="color:#ffe8aa;flex:1;">${consol}</span>${isMine?'<span style="color:var(--orange);font-size:9px;">◀ YOU</span>':''}</div>`;})():''}
         </div>
       </div>`;
     }
@@ -1717,6 +1767,8 @@ function subscribeToQuizAdmin() {
 // PLAYER VIEW LOADER
 // ══════════════════════════════════════════════════════
 async function loadPlayerView() {
+  hideAllPlayerGamePanels();
+
   const { data, error } = await sb
     .from('constellation_games')
     .select('*')
@@ -2187,15 +2239,21 @@ async function showQuizResults(myResult, gd, allScores) {
 // ══════════════════════════════════════════════════════
 // PLAYER GIVEAWAY
 // ══════════════════════════════════════════════════════
+function hideAllPlayerGamePanels() {
+  ['playerWinPanel', 'playerNoGamePanel', 'playerStarPanel', 'playerRewardPanel',
+   'playerQuizPanel', 'playerQuizResultPanel', 'playerMemoryPanel', 'playerGuessPanel']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
 async function checkForEndedGame() {
   // kept for realtime callbacks that call this path
   await loadPlayerHistory();
   showNoGame();
 }
 function showNoGame(msg) {
-  document.getElementById('playerStarPanel').style.display = 'block';
-  document.getElementById('playerGrid').innerHTML = `<div class="loading-msg" style="color:var(--danger);">${msg || 'NO ACTIVE GAME — WAIT FOR ADMIN TO LAUNCH ONE.'}</div>`;
-  document.getElementById('playerClaimBadge').textContent = 'NO GAME ACTIVE';
+  hideAllPlayerGamePanels();
+  document.getElementById('playerNoGamePanel').style.display = 'block';
+  document.getElementById('playerNoGameMsg').textContent = msg || 'NO ACTIVE EVENT — WAIT FOR ADMIN TO LAUNCH ONE.';
+  document.getElementById('playerNoGameBadge').textContent = 'NO EVENT ACTIVE';
 }
 function showEndedGameResult(game, claim) {
   const gd = game.data;
@@ -2517,7 +2575,7 @@ wrap.innerHTML = `<div class="history-game-hd" onclick="toggleHistory('${game.id
 function renderHistoryMemory(gd, claims) {
   const prizes = gd.prizes || [];
   const consolation = gd.consolation_prize || '';
-  claims.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+  claims.sort((a, b) => (a.time_taken - b.time_taken));
 
   let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
     <div style="font-size:10px;color:var(--text2);">Players: <span style="color:#00ffcc;">${claims.length}</span></div>
@@ -2526,7 +2584,7 @@ function renderHistoryMemory(gd, claims) {
 
   if (!claims.length) return html + '<div style="font-size:10px;color:var(--text3);">No submissions yet.</div>';
 
-  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>GAME ID</th><th>PAIRS</th><th>TIME</th><th>PRIZE</th></tr></thead><tbody>';
+  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>GAME ID</th><th>TIME</th><th>PAIRS</th><th>PRIZE</th></tr></thead><tbody>';
   claims.forEach((c, i) => {
     const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
     const prize = i < prizes.length ? prizes[i] : (consolation || '—');
@@ -2536,8 +2594,8 @@ function renderHistoryMemory(gd, claims) {
       <td style="font-family:'Orbitron',monospace;font-size:13px;">${rankLabel}</td>
       <td style="color:var(--text);">${c.username}</td>
       <td style="color:var(--text3);font-size:9px;font-family:'Share Tech Mono',monospace;">${c.game_user_id}</td>
-      <td style="color:#00ffcc;font-family:'Orbitron',monospace;">${c.score}/${MEMORY_PAIR_COUNT}</td>
-      <td style="color:var(--text2);font-size:10px;">${c.time_taken ? Math.round(c.time_taken/1000)+'s' : '—'}</td>
+      <td style="color:#00ffcc;font-family:'Orbitron',monospace;">${c.time_taken ? Math.round(c.time_taken/1000)+'s' : '—'}</td>
+      <td style="color:var(--text2);font-size:10px;">${c.score}/${MEMORY_PAIR_COUNT}</td>
       <td style="color:${prizeColor};font-size:11px;">${prize}</td>
     </tr>`;
   });

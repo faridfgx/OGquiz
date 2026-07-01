@@ -136,6 +136,11 @@
   <div class="mode-title">COMMANDER GUESS</div>
   <div class="mode-desc">See commander images, type their name and ability. Max score wins. Tiebreaker: fastest time.</div>
 </div>
+<div class="mode-card" id="modeCardBattle" onclick="selectMode('battle')">
+  <div class="mode-icon">⚔️</div>
+  <div class="mode-title">GRID BATTLE</div>
+  <div class="mode-desc">Blind-place Tank, Glass Cannon &amp; Reflector on a 10×10 grid, then strike 3 cells. Top 5 scores win.</div>
+</div>
         </div>
         <div id="modeSelectedLabel" style="display:none;font-size:10px;color:var(--text2);letter-spacing:2px;margin-bottom:14px;"></div>
       </div>
@@ -416,6 +421,8 @@
     <div class="panel-body" id="guessDashBody"><div class="loading-msg">WAITING FOR PLAYERS...</div></div>
   </div>
 </div>
+<!-- ──── GRID BATTLE SETUP ──── -->
+<div id="battleSetup" style="display:none;"></div>
       <!-- QUIZ LIVE DASHBOARD -->
       <div class="panel" id="quizDashPanel" style="display:none;">
         <div class="panel-hd">
@@ -567,6 +574,20 @@
       <div class="ph-badge" style="border-color:rgba(255,165,0,0.4);color:#ffa500;" id="guessStatusBadge">LOADING...</div>
     </div>
     <div class="panel-body" id="guessPlayerBody">
+      <div class="loading-msg">LOADING GAME...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ──── GRID BATTLE PLAYER PANEL ──── -->
+<div id="playerBattlePanel" style="display:none;">
+  <div class="panel">
+    <div class="panel-hd">
+      <div class="ph-dot" style="background:var(--accent3);box-shadow:0 0 14px var(--accent3);"></div>
+      <div class="ph-title">Commander Grid Battle</div>
+      <div class="ph-badge" style="border-color:var(--accent3);color:var(--accent3);" id="battleStatusBadge">LOADING...</div>
+    </div>
+    <div class="panel-body" id="battlePlayerBody">
       <div class="loading-msg">LOADING GAME...</div>
     </div>
   </div>
@@ -829,6 +850,8 @@ function logout() {
   document.getElementById('loginScreen').style.display = 'block';
   guessGameId = null; guessPrizes = Array(10).fill(''); guessSubmitted = false;
 if (guessChannel) { sb.removeChannel(guessChannel); guessChannel = null; }
+  battleGameId = null; battlePrizes = Array(BATTLE_TOP_N).fill(''); battlePlacement = {}; battleAttacks = []; battlePhase = 'placement';
+if (battleChannel) { sb.removeChannel(battleChannel); battleChannel = null; }
 }
 // ══════════════════════════════════════════════════════
 // MEMORY SETUP (admin)
@@ -929,21 +952,25 @@ function selectMode(mode) {
   document.getElementById('modeCardQuiz').className = 'mode-card' + (mode === 'quiz' ? ' selected-quiz' : '');
   document.getElementById('modeCardMemory').className = 'mode-card' + (mode === 'memory' ? ' selected' : '');  // ADD
   document.getElementById('modeCardGuess').className = 'mode-card' + (mode === 'guess' ? ' selected' : '');
+  document.getElementById('modeCardBattle').className = 'mode-card' + (mode === 'battle' ? ' selected' : '');
   document.getElementById('modeSelectedLabel').style.display = 'block';
   document.getElementById('modeSelectedLabel').textContent =
     mode === 'giveaway' ? '▶ CONSTELLATION GIVEAWAY MODE SELECTED' :
     mode === 'quiz'     ? '▶ COMMANDER QUIZ MODE SELECTED' :
-    mode === 'guess' ? '▶ COMMANDER GUESS MODE SELECTED' : '▶ MEMORY MATCH MODE SELECTED';             // ADD
+    mode === 'guess' ? '▶ COMMANDER GUESS MODE SELECTED' :
+    mode === 'battle' ? '▶ GRID BATTLE MODE SELECTED' : '▶ MEMORY MATCH MODE SELECTED';             // ADD
 
   document.getElementById('giveawaySetup').style.display = mode === 'giveaway' ? 'block' : 'none';
   document.getElementById('quizSetup').style.display    = mode === 'quiz'      ? 'block' : 'none';
   document.getElementById('memorySetup').style.display  = mode === 'memory'    ? 'block' : 'none';  // ADD
   document.getElementById('guessSetup').style.display = mode === 'guess' ? 'block' : 'none';
+  document.getElementById('battleSetup').style.display = mode === 'battle' ? 'block' : 'none';
 
 if (mode === 'giveaway') initGiveawaySetup();
 else if (mode === 'quiz') initQuizSetup();
 else if (mode === 'memory') initMemorySetup();
 else if (mode === 'guess') initGuessSetup();
+else if (mode === 'battle') { initBattleSetup(); renderBattlePrizeGrid(); }
 
 
 }
@@ -1009,6 +1036,16 @@ async function initAdminSetup() {
   if (cpInp) cpInp.value = guessConsolation;
   document.getElementById('guessDashPanel').style.display = 'block';
   loadGuessDashboard(); subscribeToGuessAdmin();
+} else if (detectedMode === 'battle') {
+  selectMode('battle');
+  battleGameId = data[0].id;
+  battlePrizes = gd.prizes || Array(BATTLE_TOP_N).fill('');
+  battleConsolation = gd.consolation_prize || '';
+  renderBattlePrizeGrid();
+  const cpInp = document.getElementById('battle-consolation-prize');
+  if (cpInp) cpInp.value = battleConsolation;
+  document.getElementById('battleDashPanel').style.display = 'block';
+  loadBattleDashboard(); subscribeToBattleAdmin();
 }
 await checkAndResumeTimer(gd, data[0].id);
   }
@@ -1066,7 +1103,7 @@ async function loadPlayerHistory() {
   // Score-based modes need every player's claim (not just mine) to know my real rank
   // and therefore which prize I actually won.
   const scoreGameIds = participated
-    .filter(g => ['quiz', 'memory', 'guess'].includes(g.data?.mode))
+    .filter(g => ['quiz', 'memory', 'guess', 'battle'].includes(g.data?.mode))
     .map(g => g.id);
 
   const claimsByGame = {};
@@ -1153,9 +1190,22 @@ async function loadPlayerHistory() {
         : consol
         ? `<span style="color:var(--orange);">${consol}</span>`
         : '';
+    } else if (mode === 'battle') {
+      const prizes = gd?.prizes || [];
+      const consol = gd?.consolation_prize || '';
+      const ranked = (claimsByGame[game.id] || []).slice()
+        .sort((a, b) => (b.score - a.score) || ((a.time_taken||Infinity) - (b.time_taken||Infinity)));
+      const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
+      scoreHtml = `<span style="color:var(--accent3);">${claim.score ?? '?'} pts</span>`;
+      const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
+      prizeHtml = myPrize
+        ? `<span style="color:var(--accent3);">🏆 ${myPrize}</span>`
+        : consol
+        ? `<span style="color:var(--orange);">${consol}</span>`
+        : '';
     }
 
-    const modeColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : 'var(--gold)';
+    const modeColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : mode === 'battle' ? 'var(--accent3)' : 'var(--gold)';
     const statusDot = isActive
       ? `<span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px rgba(57,255,20,0.6);flex-shrink:0;"></span>`
       : `<span style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block;flex-shrink:0;"></span>`;
@@ -1166,7 +1216,7 @@ async function loadPlayerHistory() {
     let myRankForTable = -1;
     if (mode !== 'giveaway') {
       const ranked = (claimsByGame[game.id] || []).slice()
-        .sort((a, b) => mode === 'memory' ? (a.time_taken - b.time_taken) : (b.score - a.score) || (a.time_taken - b.time_taken));
+        .sort((a, b) => mode === 'memory' ? (a.time_taken - b.time_taken) : mode === 'battle' ? ((b.score - a.score) || ((a.time_taken||Infinity) - (b.time_taken||Infinity))) : (b.score - a.score) || (a.time_taken - b.time_taken));
       myRankForTable = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
     }
     let prizeTableHtml = '';
@@ -1618,11 +1668,17 @@ async function publishQuiz() {
 // ══════════════════════════════════════════════════════
 async function clearGame() {
   stopGameTimer();
-  const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId;
+  const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId || battleGameId;
   if (!gid) return;
   if (!confirm('End this game? Players will see their results revealed.')) return;
 
   const { data: gameData } = await sb.from('constellation_games').select('data').eq('id', gid).single();
+
+  // Grid Battle: compute scores from blind placements/attacks before revealing
+  if (gameData?.data?.mode === 'battle') {
+    await battleOnGameEnd(gid);
+  }
+
   const updatedData = { ...(gameData?.data || {}), active: false, revealed: true };
   await sb.from('constellation_games').update({ data: updatedData }).eq('id', gid);
 
@@ -1631,17 +1687,21 @@ async function clearGame() {
   if (quizChannel)     { sb.removeChannel(quizChannel);     quizChannel     = null; }
   if (memoryChannel)   { sb.removeChannel(memoryChannel);   memoryChannel   = null; }
   if (guessChannel)    { sb.removeChannel(guessChannel);    guessChannel    = null; }
+  if (battleChannel)   { sb.removeChannel(battleChannel);   battleChannel   = null; }
 
   // Reset all active game IDs
   activeGameId   = null;
   activeQuizId   = null;
   activeMemoryId = null;
   guessGameId    = null;
+  battleGameId   = null;
 
   // Reset prizes/state
   guessPrizes    = Array(GUESS_TOP_N).fill('');
   guessConsolation = '';
   guessSubmitted = false;
+  battlePrizes   = Array(BATTLE_TOP_N).fill('');
+  battleConsolation = '';
 
   // Hide all game panels
   document.getElementById('adminDashPanel').style.display  = 'none';
@@ -1656,6 +1716,7 @@ async function clearGame() {
   document.getElementById('quizSetup').style.display     = 'none';
   document.getElementById('memorySetup').style.display   = 'none';
   document.getElementById('guessSetup').style.display    = 'none';
+  document.getElementById('battleSetup').style.display   = 'none';
   document.getElementById('modeSelectedLabel').style.display = 'none';
 
   // Deselect mode cards
@@ -1663,6 +1724,7 @@ async function clearGame() {
   document.getElementById('modeCardQuiz').className     = 'mode-card';
   document.getElementById('modeCardMemory').className   = 'mode-card';
   document.getElementById('modeCardGuess').className    = 'mode-card';
+  document.getElementById('modeCardBattle').className   = 'mode-card';
 
   currentMode = null;
 
@@ -1811,6 +1873,10 @@ async function loadPlayerView() {
   guessCount  = gd.count || 10;
   document.getElementById('playerGuessPanel').style.display = 'block';
   loadPlayerGuess(gd);
+} else if (mode === 'battle') {
+  battleGameId = game.id;
+  document.getElementById('playerBattlePanel').style.display = 'block';
+  loadPlayerBattle(gd);
 } else {
     activeGameId = game.id;
     N = gd.n;
@@ -2258,7 +2324,7 @@ async function showQuizResults(myResult, gd, allScores) {
 // ══════════════════════════════════════════════════════
 function hideAllPlayerGamePanels() {
   ['playerWinPanel', 'playerNoGamePanel', 'playerStarPanel', 'playerRewardPanel',
-   'playerQuizPanel', 'playerQuizResultPanel', 'playerMemoryPanel', 'playerGuessPanel']
+   'playerQuizPanel', 'playerQuizResultPanel', 'playerMemoryPanel', 'playerGuessPanel', 'playerBattlePanel']
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 }
 async function checkForEndedGame() {
@@ -2656,7 +2722,130 @@ function renderHistoryBody(game, gd, claims, mode) {
   if (mode === 'quiz')   return renderHistoryQuiz(gd, claims);
   if (mode === 'memory') return renderHistoryMemory(gd, claims);
   if (mode === 'guess')  return renderHistoryGuess(gd, claims);
+  if (mode === 'battle') return renderHistoryBattle(gd, claims);
   return renderHistoryGiveaway(gd, claims);
+}
+
+function renderHistoryBattle(gd, claims) {
+  const prizes = gd.prizes || [];
+  const consolation = gd.consolation_prize || '';
+
+  claims = claims.slice().sort((a, b) => (b.score - a.score) || ((a.time_taken||Infinity) - (b.time_taken||Infinity)));
+
+  let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+    <div style="font-size:10px;color:var(--text2);">Grid: <span style="color:var(--accent3);">10×10</span></div>
+    <div style="font-size:10px;color:var(--text2);">Players: <span style="color:var(--accent3);">${claims.length}</span></div>
+    ${consolation ? `<div style="font-size:10px;color:var(--text2);">Consolation: <span style="color:var(--orange);">${consolation}</span></div>` : ''}
+  </div>`;
+
+  if (!claims.length) return html + '<div style="font-size:10px;color:var(--text3);">No submissions yet.</div>';
+
+  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>SCORE</th><th>TIME TAKEN</th><th>PRIZE</th></tr></thead><tbody>';
+  claims.forEach((c, i) => {
+    const rankLabel  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+    const inTop      = i < prizes.length;
+    const prize      = inTop ? prizes[i] : (consolation || '—');
+    const prizeColor = inTop ? 'var(--accent3)' : consolation ? 'var(--orange)' : 'var(--text3)';
+    const timeSec    = c.time_taken ? Math.round(c.time_taken / 1000) + 's' : '—';
+    const breakdown  = c.battle_attack_score != null
+      ? ` <span style="color:var(--text3);font-size:9px;">(atk ${c.battle_attack_score}${c.battle_bonus ? ` +${c.battle_bonus} bonus` : ''})</span>`
+      : '';
+    html += `<tr style="${inTop ? 'background:rgba(0,212,255,0.04);' : ''}">
+      <td style="font-family:'Orbitron',monospace;font-size:13px;">${rankLabel}</td>
+      <td style="color:var(--text);">${c.username}<br><span style="color:var(--text3);font-size:9px;font-family:'Share Tech Mono',monospace;">${c.game_user_id}</span></td>
+      <td style="color:var(--accent3);font-family:'Orbitron',monospace;">${c.score ?? '?'}${breakdown}</td>
+      <td style="font-size:10px;color:var(--text2);">${timeSec}</td>
+      <td style="color:${prizeColor};font-size:11px;">${prize}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+
+  if (prizes.length) {
+    html += `<div style="margin-top:14px;font-size:9px;letter-spacing:2px;color:var(--accent3);margin-bottom:8px;">✦ PRIZE TABLE</div>
+    <div style="background:var(--bg3);border:1px solid rgba(0,212,255,0.15);border-radius:4px;overflow:hidden;">`;
+    prizes.forEach((p, i) => {
+      const rl = i === 0 ? '🥇 1st' : i === 1 ? '🥈 2nd' : i === 2 ? '🥉 3rd' : `#${i+1}`;
+      html += `<div style="display:flex;gap:10px;padding:7px 12px;border-bottom:1px solid rgba(0,212,255,0.08);font-size:10px;">
+        <span style="min-width:44px;color:var(--accent3);">${rl}</span>
+        <span style="color:#ffe8aa;">${p}</span>
+      </div>`;
+    });
+    if (consolation) html += `<div style="display:flex;gap:10px;padding:7px 12px;font-size:10px;background:rgba(255,107,53,0.04);">
+      <span style="min-width:44px;color:var(--orange);">rest</span>
+      <span style="color:#ffe8aa;">${consolation}</span>
+    </div>`;
+    html += '</div>';
+  }
+
+  // ── Detailed audit log: exactly what each player placed and attacked,
+  //    and what landed on their cards, so the admin can verify the score math. ──
+  if (typeof battleComputeDetails === 'function') {
+    const details = battleComputeDetails(claims);
+    const detailCards = details
+      .slice()
+      .sort((a, b) => (b.claim.score - a.claim.score) || 0)
+      .map(d => renderBattleDetailCard(d))
+      .join('');
+    html += `<div style="margin-top:18px;">
+      <div class="battle-detail-toggle" style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:10px;" onclick="toggleBattleDetailList(this)">
+        <span class="arrow-indicator" style="color:var(--accent3);font-size:11px;">▸</span>
+        <span style="font-size:9px;letter-spacing:2px;color:var(--accent3);">DETAILED PLACEMENT &amp; ATTACK LOG — VERIFY SCORING</span>
+      </div>
+      <div class="battle-detail-list" style="display:none;">${detailCards}</div>
+    </div>`;
+  }
+
+  return html;
+}
+
+function toggleBattleDetailList(el) {
+  const list = el.nextElementSibling;
+  if (!list) return;
+  const open = list.style.display === 'block';
+  list.style.display = open ? 'none' : 'block';
+  const arrow = el.querySelector('.arrow-indicator');
+  if (arrow) arrow.textContent = open ? '▸' : '▾';
+}
+
+function renderBattleDetailCard(d) {
+  const c = d.claim;
+  const placement = c.battle_placement || {};
+
+  const placementRows = BATTLE_CARD_ORDER.map(type => {
+    const card = BATTLE_CARDS[type];
+    const anchor = placement[type];
+    return `<div style="display:flex;gap:8px;align-items:center;padding:3px 0;">
+      <span style="width:9px;height:9px;border-radius:50%;background:${card.color};flex-shrink:0;"></span>
+      <span style="width:110px;color:${card.color};font-size:10px;">${card.label} (${card.value>0?'+':''}${card.value})</span>
+      <span style="color:var(--text2);font-size:10px;">${anchor != null ? battleCoordLabel(anchor) : '— not placed —'}</span>
+    </div>`;
+  }).join('');
+
+  const attackRows = (d.attacksDetail.length ? d.attacksDetail : []).map((a, i) => {
+    const occ = a.occupants.length
+      ? a.occupants.map(o => `<span style="color:${BATTLE_CARDS[o.cardType].color};">${o.username}'s ${BATTLE_CARDS[o.cardType].label} (${BATTLE_CARDS[o.cardType].value>0?'+':''}${BATTLE_CARDS[o.cardType].value})</span>`).join(', ')
+      : '<span style="color:var(--text3);">empty cell</span>';
+    return `<div style="padding:3px 0;font-size:10px;color:var(--text2);">#${i+1} <span style="color:var(--text);">${battleCellLabel(a.cell)}</span> → ${occ} = <b style="color:var(--accent3);">${a.subtotal>0?'+':''}${a.subtotal} pt</b></div>`;
+  }).join('') || '<div style="font-size:10px;color:var(--text3);">No attacks recorded.</div>';
+
+  const hitRows = d.incomingHits.length
+    ? d.incomingHits.map(h => `<div style="padding:2px 0;font-size:10px;color:var(--text2);">
+        <span style="color:var(--text);">${battleCellLabel(h.cell)}</span> — their ${BATTLE_CARDS[h.cardType].label} was hit by ${h.attacker}${h.cardType === 'reflector' ? ' <span style="color:var(--green);">(+1 bonus)</span>' : ''}
+      </div>`).join('')
+    : '<div style="font-size:10px;color:var(--text3);">No hits taken on their cards.</div>';
+
+  return `<div style="background:var(--bg3);border:1px solid var(--border2);border-radius:4px;padding:12px 14px;margin-bottom:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="color:var(--text);font-size:11px;">${c.username} <span style="color:var(--text3);font-size:9px;font-family:'Share Tech Mono',monospace;">(${c.game_user_id})</span></span>
+      <span style="color:var(--accent3);font-family:'Orbitron',monospace;font-size:12px;">${c.score ?? d.score} pts</span>
+    </div>
+    <div style="font-size:9px;letter-spacing:1px;color:var(--text3);margin:6px 0 2px;">PLACEMENT</div>
+    ${placementRows}
+    <div style="font-size:9px;letter-spacing:1px;color:var(--text3);margin:8px 0 2px;">ATTACKS (${d.attacksDetail.length}/3) — attack score = ${c.battle_attack_score ?? d.attackScore}</div>
+    ${attackRows}
+    <div style="font-size:9px;letter-spacing:1px;color:var(--text3);margin:8px 0 2px;">HITS TAKEN ON THEIR CARDS — reflector bonus = +${c.battle_bonus ?? d.reflectorBonus}</div>
+    ${hitRows}
+  </div>`;
 }
 
 function renderHistoryQuiz(gd, claims) {
@@ -2826,5 +3015,6 @@ window.addEventListener('resize', initHeaderStars);
 <script src="memoryGame.js"></script>
 <script src="guessCommanders.js"></script>
 <script src="guessGame.js"></script>
+<script src="gridBattle.js"></script>
 </body>
 </html>

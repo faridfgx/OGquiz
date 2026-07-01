@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Battle — Last Replay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#02050a; --bg3:#0c141d;
+    --border2:rgba(255,255,255,0.09);
+    --text:#d8e6f5; --text2:#8fa3b8; --text3:#5a6c7d;
+    --accent:#00d4ff; --accent3:#00d4ff;
+    --orange:#ff6b35; --purple:#bf5fff; --green:#39ff14; --gold:#ffd700; --danger:#ff3344;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;}
+  .wrap{max-width:760px;margin:0 auto;padding:40px 20px 80px;}
+  h1{font-family:'Orbitron',monospace;font-size:16px;letter-spacing:4px;color:var(--accent3);margin:0 0 6px;}
+  .sub{font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:28px;}
+  .panel{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:20px;margin-bottom:20px;}
+  .panel-title{font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--text2);margin-bottom:14px;}
+  .btn{background:transparent;border:1px solid var(--accent);color:var(--accent);font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;padding:10px 18px;border-radius:4px;cursor:pointer;transition:all .15s;}
+  .btn:hover{background:rgba(0,212,255,0.1);}
+  .btn:disabled{opacity:.35;cursor:not-allowed;}
+  .btn-row{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;}
+  .msg{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6;}
+  .msg.err{color:var(--danger);}
+  .msg.ok{color:var(--green);}
+  .game-id{font-family:'Orbitron',monospace;font-size:12px;color:var(--accent3);}
+  .game-status{display:inline-block;margin-left:8px;font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;border:1px solid var(--border2);color:var(--text3);}
+  .game-status.live{color:var(--green);border-color:rgba(57,255,20,0.4);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚔ GRID BATTLE — LAST REPLAY</h1>
+  <div class="sub">Finds the most recent battle game — click below to play it back</div>
+
+  <div class="panel" id="statusPanel">
+    <div class="panel-title">▶ STATUS</div>
+    <div class="msg" id="statusMsg">Connecting...</div>
+    <div class="btn-row">
+      <button class="btn" id="retryBtn" style="display:none;">↺ RETRY</button>
+      <button class="btn" id="startReplayBtn" style="display:none;">▶ START REPLAY</button>
+    </div>
+  </div>
+</div>
+
+<!-- Supabase client -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Your existing project files: adjust paths if this page lives elsewhere -->
+<script src="gridBattle.js"></script>
+<script src="battleReplay.js"></script>
+
+<script>
+const SUPABASE_URL  = 'https://brtylfnzrcljicppargr.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydHlsZm56cmNsamljcHBhcmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MjU2OTMsImV4cCI6MjA3NzMwMTY5M30.cUFqyzyOlrJuM_CxdQcokXfj5-5NUnLorIriEHWDl2I';
+
+let sb = null;
+let lastClaims = null;
+
+const statusMsg = document.getElementById('statusMsg');
+const retryBtn = document.getElementById('retryBtn');
+const startReplayBtn = document.getElementById('startReplayBtn');
+
+retryBtn.onclick = run;
+startReplayBtn.onclick = () => {
+  if (!lastClaims) return;
+  startReplayBtn.disabled = true;
+  openBattleReplay(lastClaims);
+};
+
+run();
+
+async function run() {
+  retryBtn.style.display = 'none';
+  startReplayBtn.style.display = 'none';
+  startReplayBtn.disabled = false;
+  setMsg('Connecting...', '');
+
+  try {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  } catch (e) {
+    return fail('Could not init Supabase client: ' + e.message);
+  }
+
+  setMsg('Finding most recent battle game...', '');
+  const { data: games, error: gErr } = await sb
+    .from('constellation_games')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (gErr) return fail('Error loading games: ' + gErr.message);
+
+  const lastBattle = (games || []).find(g => g.data && g.data.mode === 'battle');
+  if (!lastBattle) return fail('No grid battle games found yet.');
+
+  const gd = lastBattle.data;
+  const statusLabel = gd.active ? 'LIVE' : (gd.revealed ? 'REVEALED' : 'ENDED');
+  const statusClass = gd.active ? 'live' : '';
+
+  setMsg(`Found game <span class="game-id">${lastBattle.id}</span><span class="game-status ${statusClass}">${statusLabel}</span> — loading claims...`, '', true);
+
+  const { data: claims, error: cErr } = await sb
+    .from('constellation_claims')
+    .select('*')
+    .eq('game_id', lastBattle.id)
+    .order('claimed_at', { ascending: true });
+
+  if (cErr) return fail('Error loading claims: ' + cErr.message);
+  if (!claims || !claims.length) return fail(`Game ${lastBattle.id} has no claims to replay.`);
+
+  lastClaims = claims;
+  setMsg(`Game <span class="game-id">${lastBattle.id}</span><span class="game-status ${statusClass}">${statusLabel}</span> — ${claims.length} player(s) locked in. Ready to replay.`, 'ok', true);
+  startReplayBtn.style.display = 'inline-block';
+}
+
+function fail(message) {
+  setMsg(message, 'err');
+  retryBtn.style.display = 'inline-block';
+}
+
+function setMsg(html, cls, isHtml) {
+  statusMsg.className = 'msg' + (cls ? ' ' + cls : '');
+  if (isHtml) statusMsg.innerHTML = html; else statusMsg.textContent = html;
+}
+</script>
+</body>
+</html>

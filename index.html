@@ -7,6 +7,74 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<style>
+  /* ── Player Event Banner (mode-agnostic, sits above active panel) ── */
+  .art-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    margin-bottom: 18px;
+    border: 2px solid rgba(var(--banner-rgb), 0.7);
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    background-image:
+      linear-gradient(90deg, rgba(var(--banner-rgb), 0.25) 0%, rgba(5, 10, 18, 0.85) 40%, rgba(5, 10, 18, 0.95) 100%),
+      url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=600&q=80');
+    background-size: cover;
+    background-position: center;
+    box-shadow:
+      inset 0 0 15px rgba(var(--banner-rgb), 0.3),
+      0 0 20px rgba(var(--banner-rgb), 0.2);
+    animation: bannerPulse 4s infinite ease-in-out;
+  }
+  .art-banner::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0; width: 4px;
+    background: rgba(var(--banner-rgb), 1);
+    box-shadow: 0 0 10px rgba(var(--banner-rgb), 1);
+  }
+  .art-banner-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(rgba(255,255,255,0.02) 50%, transparent 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+  }
+  .art-icon {
+    font-size: 24px;
+    line-height: 1;
+    z-index: 1;
+    filter: drop-shadow(0 0 8px rgba(var(--banner-rgb), 0.8));
+    background: rgba(0,0,0,0.4);
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    border: 1px solid rgba(var(--banner-rgb), 0.5);
+    flex-shrink: 0;
+  }
+  .art-text-block { flex: 1; z-index: 1; min-width: 0; }
+  .art-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(var(--banner-rgb), 0.8);
+    margin-bottom: 2px;
+  }
+  .art-subtext {
+    font-size: 9px;
+    color: var(--text2);
+    letter-spacing: 1px;
+    opacity: 0.8;
+  }
+  @keyframes bannerPulse {
+    0%, 100% { border-color: rgba(var(--banner-rgb), 0.5); }
+    50% { border-color: rgba(var(--banner-rgb), 0.8); }
+  }
+</style>
 
 </head>
 <body>
@@ -124,7 +192,7 @@
           <div class="mode-card" id="modeCardQuiz" onclick="selectMode('quiz')">
             <div class="mode-icon">🧠</div>
             <div class="mode-title">COMMANDER QUIZ</div>
-            <div class="mode-desc">10 random questions about commanders. Top 10 scorers each win a random reward from the prize pool.</div>
+            <div class="mode-desc">10 random questions about commanders. Top 5 scorers each win a random reward from the prize pool.</div>
           </div>
 		  <div class="mode-card" id="modeCardMemory" onclick="selectMode('memory')">
   <div class="mode-icon">🧩</div>
@@ -140,6 +208,11 @@
   <div class="mode-icon">⚔️</div>
   <div class="mode-title">GRID BATTLE</div>
   <div class="mode-desc">Blind-place Tank, Glass Cannon &amp; Reflector on a 10×10 grid, then strike 3 cells. Top 5 scores win.</div>
+</div>
+<div class="mode-card" id="modeCardHulls" onclick="selectMode('hulls')">
+  <div class="mode-icon">🚀</div>
+  <div class="mode-title">HULLS &amp; WEAPONS QUIZ</div>
+  <div class="mode-desc">Multiple choice on ship hulls, weapons &amp; armor mechanics. Top 5 scorers each win a prize.</div>
 </div>
         </div>
         <div id="modeSelectedLabel" style="display:none;font-size:10px;color:var(--text2);letter-spacing:2px;margin-bottom:14px;"></div>
@@ -261,7 +334,7 @@
 
             <div id="handPickStatus" style="display:none;padding:10px 12px;background:rgba(191,95,255,0.06);border:1px solid rgba(191,95,255,0.2);border-radius:3px;font-size:10px;color:var(--purple);">
               <span id="handPickCount">0 questions selected</span>
-              <button class="btn btn-purple btn-sm" style="margin-left:10px;" onclick="openMcqModal()">✎ EDIT SELECTION</button>
+              <button class="btn btn-purple btn-sm" style="margin-left:10px;" onclick="openMcqModal('quiz')">✎ EDIT SELECTION</button>
             </div>
           </div>
           <div class="quiz-config">
@@ -292,6 +365,76 @@
           <div id="quizSetupWarn" class="warn">⚠ SET ALL 10 PRIZES BEFORE PUBLISHING</div>
           <div class="btn-row">
             <button class="btn btn-purple" onclick="publishQuiz()">⬡ PUBLISH QUIZ</button>
+          </div>
+        </div>
+      </div>
+	  </div>
+
+    <!-- ──── HULLS & WEAPONS QUIZ SETUP ──── -->
+    <div id="hullsSetup" style="display:none;">
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:#4d94ff;box-shadow:0 0 14px rgba(77,148,255,0.4);"></div>
+          <div class="ph-title">Hulls &amp; Weapons Quiz Setup</div>
+          <div class="ph-badge" style="border-color:#4d94ff;color:#4d94ff;" id="hullsSetupBadge">10 QUESTIONS · TOP 10 WIN</div>
+        </div>
+        <div class="panel-body">
+          <div class="count-row" style="margin-bottom:16px;">
+            <span class="count-label">QUESTIONS :</span>
+            <div class="count-btns" id="hullsQCountBtns"></div>
+          </div>
+          <!-- QUESTION SELECTION MODE -->
+          <div style="margin-bottom:16px;">
+            <div style="font-size:9px;letter-spacing:2px;color:var(--text2);margin-bottom:8px;">QUESTION SELECTION</div>
+            <div class="mode-toggle">
+              <button class="mode-toggle-btn active" id="hModeRandom" onclick="setHullsQMode('random')">🎲 RANDOM FROM BANK</button>
+              <button class="mode-toggle-btn" id="hModeHandpick" onclick="setHullsQMode('handpick')">✋ HAND-PICK QUESTIONS</button>
+            </div>
+
+            <!-- CATEGORY FILTER (random mode only) -->
+            <div id="hullsCategoryFilterPanel" style="margin-top:12px;padding:12px 14px;background:rgba(77,148,255,0.05);border:1px solid rgba(77,148,255,0.18);border-radius:4px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div style="font-size:9px;letter-spacing:2px;color:#4d94ff;">📂 QUESTION CATEGORIES</div>
+                <button onclick="toggleAllHullsCategories(true)"  style="font-size:9px;padding:2px 8px;border:1px solid rgba(77,148,255,0.3);background:rgba(77,148,255,0.1);color:#4d94ff;border-radius:2px;cursor:pointer;letter-spacing:1px;">ALL</button>
+                <button onclick="toggleAllHullsCategories(false)" style="font-size:9px;padding:2px 8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text2);border-radius:2px;cursor:pointer;letter-spacing:1px;">NONE</button>
+                <span id="hullsCatPoolCount" style="margin-left:auto;font-size:9px;color:var(--text2);letter-spacing:1px;"></span>
+              </div>
+              <div id="hullsCategoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:7px;"></div>
+            </div>
+
+            <div id="hullsHandPickStatus" style="display:none;padding:10px 12px;background:rgba(77,148,255,0.06);border:1px solid rgba(77,148,255,0.2);border-radius:3px;font-size:10px;color:#4d94ff;">
+              <span id="hullsHandPickCount">0 questions selected</span>
+              <button class="btn btn-sm" style="margin-left:10px;border-color:#4d94ff;color:#4d94ff;" onclick="openMcqModal('hulls')">✎ EDIT SELECTION</button>
+            </div>
+          </div>
+          <div class="quiz-config">
+            <div class="quiz-config-title" id="hullsPrizeTitle" style="color:#4d94ff;">▶ PRIZE POOL — TOP 10 SCORERS EACH WIN ONE</div>
+            <div class="prog-row">
+              <span class="prog-label">PRIZES SET</span>
+              <div class="prog-bar"><div class="prog-fill" id="hullsProgFill" style="width:0%;background:linear-gradient(90deg,#4d94ff,var(--accent));"></div></div>
+              <span class="prog-count" id="hullsProgCount" style="color:#4d94ff;">0/10</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;" id="hullsPrizeGrid"></div>
+            <!-- CONSOLATION PRIZE -->
+            <div class="consolation-box">
+              <div class="consolation-label">⬡ CONSOLATION PRIZE — EVERYONE OUTSIDE TOP 10</div>
+              <div class="cc-input-wrap" id="hsug-wrap-consolation" style="overflow:visible;">
+                <input class="cc-input" id="hulls-consolation-prize" type="text" placeholder="Enter consolation prize (optional)…"
+                  oninput="hullsConsolationPrize=this.value.trim();filterSuggestions('consolation','hulls','',this.value)"
+                  onfocus="openSuggestions('consolation','hulls','')"
+                  onblur="closeSuggestions('consolation','hulls')"
+                  style="border-color:rgba(255,107,53,0.3);font-size:11px;" />
+                <div class="reward-suggestions" id="hsug-dd-consolation" style="z-index:9999;"></div>
+              </div>
+            </div>
+			 <div id="hullsTimerPicker"></div>
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn btn-sm" style="border-color:#4d94ff;color:#4d94ff;" onclick="clearHullsPrizes()">✕ CLEAR PRIZES</button>
+            </div>
+          </div>
+          <div id="hullsSetupWarn" class="warn">⚠ SET ALL 10 PRIZES BEFORE PUBLISHING</div>
+          <div class="btn-row">
+            <button class="btn" style="background:#4d94ff;color:#04101f;" onclick="publishHulls()">⬡ PUBLISH QUIZ</button>
           </div>
         </div>
       </div>
@@ -432,6 +575,16 @@
         </div>
         <div class="panel-body" id="quizDashBody"><div class="loading-msg">WAITING FOR PLAYERS...</div></div>
       </div>
+
+      <!-- HULLS & WEAPONS QUIZ LIVE DASHBOARD -->
+      <div class="panel" id="hullsDashPanel" style="display:none;">
+        <div class="panel-hd">
+          <div class="rt-dot"></div>
+          <div class="ph-title">Live Hulls &amp; Weapons Leaderboard</div>
+          <div class="ph-badge" style="border-color:#4d94ff;color:#4d94ff;">LIVE</div>
+        </div>
+        <div class="panel-body" id="hullsDashBody"><div class="loading-msg">WAITING FOR PLAYERS...</div></div>
+      </div>
     
 
     <!-- ──── GAME HISTORY ──── -->
@@ -469,6 +622,9 @@
 </div>
   <!-- ═══════════════ PLAYER SECTION ═══════════════ -->
   <div id="playerSection" style="display:none;">
+
+    <!-- Mode-agnostic event status banner: LIVE while active, ENDED for 12h after, then hidden -->
+    <div id="playerEventBanner" style="display:none;"></div>
 
     <!-- Win reveal panel (giveaway) -->
     <div id="playerWinPanel" style="display:none;">
@@ -540,6 +696,30 @@
           <div class="ph-badge" id="quizResultBadge">YOUR SCORE</div>
         </div>
         <div class="panel-body" id="playerQuizResultBody"></div>
+      </div>
+    </div>
+
+    <!-- ──── HULLS & WEAPONS QUIZ PLAYER PANEL ──── -->
+    <div id="playerHullsPanel" style="display:none;">
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:#4d94ff;box-shadow:0 0 14px rgba(77,148,255,0.4);"></div>
+          <div class="ph-title">Hulls &amp; Weapons Quiz</div>
+          <div class="ph-badge" style="border-color:#4d94ff;color:#4d94ff;" id="hullsStatusBadge">LOADING...</div>
+        </div>
+        <div class="panel-body" id="hullsPlayerBody">
+          <div class="loading-msg">LOADING QUIZ...</div>
+        </div>
+      </div>
+
+      <!-- Hulls result / leaderboard -->
+      <div class="panel" id="playerHullsResultPanel" style="display:none;">
+        <div class="panel-hd">
+          <div class="ph-dot" style="background:var(--gold);box-shadow:0 0 14px rgba(255,215,0,0.4);"></div>
+          <div class="ph-title">Hulls &amp; Weapons Results &amp; Leaderboard</div>
+          <div class="ph-badge" id="hullsResultBadge">YOUR SCORE</div>
+        </div>
+        <div class="panel-body" id="playerHullsResultBody"></div>
       </div>
     </div>
 <!-- ──── MEMORY PLAYER PANEL ──── -->
@@ -641,6 +821,7 @@
   </div>
 </div>
 <script src="mcqdb.js"></script>
+<script src="hulls.js"></script>
 <script src="gameTimer.js"></script>
 <script>
 // ══════════════════════════════════════════════════════
@@ -649,7 +830,9 @@
 const ADMIN_PASS = (() => { const x=[97,109,122,49,50,53]; return x.map(c=>String.fromCharCode(c)).join(''); })();
 const MAX_PER_CONSTELLATION = 3;
 const QUIZ_Q_COUNT = 10;
-const QUIZ_TOP_N = 10;
+const QUIZ_TOP_N = 5;
+const HULLS_Q_COUNT = 10;
+const HULLS_TOP_N = 5;
 
 const SUPABASE_URL  = 'https://brtylfnzrcljicppargr.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydHlsZm56cmNsamljcHBhcmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MjU2OTMsImV4cCI6MjA3NzMwMTY5M30.cUFqyzyOlrJuM_CxdQcokXfj5-5NUnLorIriEHWDl2I';
@@ -758,6 +941,23 @@ let quizSubmitted = false;
 let quizStartTime = null;
 let quizChannel = null;
 
+// Hulls & Weapons Quiz state
+let hullsQCount = 10; // admin-chosen question count (5–30)
+let hullsPrizes = Array(HULLS_TOP_N).fill('');
+let hullsConsolationPrize = '';
+let hullsQMode = 'random'; // 'random' | 'handpick'
+let hullsHandPickedQuestions = []; // questions admin hand-picked
+let hullsPickerSelected = new Set(); // indices into HULLS_BANK
+let hullsSelectedCategories = new Set(); // category keys for random mode
+let activeHullsId = null;
+let hullsQuestions = [];
+let hullsAnswers = [];
+let hullsCurrent = 0;
+let hullsScore = 0;
+let hullsSubmitted = false;
+let hullsStartTime = null;
+let hullsChannel = null;
+
 let activeMemoryId = null;
 let memoryChannel = null;
 
@@ -787,6 +987,32 @@ function stopTabWatcher() {
   if (quizVisibilityHandler) {
     document.removeEventListener('visibilitychange', quizVisibilityHandler);
     quizVisibilityHandler = null;
+  }
+}
+
+// ── Hulls & Weapons Quiz: tab visibility / focus anti-cheat ──
+let hullsTabSwitches = 0;
+let hullsVisibilityHandler = null;
+
+function startHullsTabWatcher() {
+  stopHullsTabWatcher();
+  hullsTabSwitches = 0;
+  hullsVisibilityHandler = () => {
+    if (document.hidden) {
+      hullsTabSwitches++;
+      try {
+        const s = loadHullsSession();
+        if (s) { s.tabSwitches = hullsTabSwitches; localStorage.setItem(hullsStorageKey(), JSON.stringify(s)); }
+      } catch(e) {}
+    }
+  };
+  document.addEventListener('visibilitychange', hullsVisibilityHandler);
+}
+
+function stopHullsTabWatcher() {
+  if (hullsVisibilityHandler) {
+    document.removeEventListener('visibilitychange', hullsVisibilityHandler);
+    hullsVisibilityHandler = null;
   }
 }
 
@@ -836,14 +1062,18 @@ function showApp() {
     bar.innerHTML = `<span class="id-badge" style="border-color:var(--accent3);color:var(--accent3);">PLAYER</span><span class="id-label">USERNAME:</span><span class="id-val">${currentUser.username}</span><span class="id-label" style="margin-left:10px;">GAME ID:</span><span class="id-val" style="color:var(--accent2);">${currentUser.gameId}</span><button class="btn btn-sm" style="margin-left:auto;color:var(--text2);border-color:var(--border2);font-size:9px;" onclick="logout()">LOGOUT</button>`;
     document.getElementById('playerSection').style.display = 'block';
     loadPlayerView();
+    startBannerRefresh();
   }
 }
 function logout() {
       stopGameTimer();
       stopPlayerTimer();
-  currentUser = null; claimsData = []; playerRewardsSeed = null; quizPrizes = Array(QUIZ_TOP_N).fill('');
+      stopBannerRefresh();
+      hideEventBanner();
+  currentUser = null; claimsData = []; playerRewardsSeed = null; quizPrizes = Array(QUIZ_TOP_N).fill(''); hullsPrizes = Array(HULLS_TOP_N).fill('');
   if (realtimeChannel) { sb.removeChannel(realtimeChannel); realtimeChannel = null; }
   if (quizChannel) { sb.removeChannel(quizChannel); quizChannel = null; }
+  if (hullsChannel) { sb.removeChannel(hullsChannel); hullsChannel = null; }
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('adminSection').style.display = 'none';
   document.getElementById('playerSection').style.display = 'none';
@@ -953,24 +1183,28 @@ function selectMode(mode) {
   document.getElementById('modeCardMemory').className = 'mode-card' + (mode === 'memory' ? ' selected' : '');  // ADD
   document.getElementById('modeCardGuess').className = 'mode-card' + (mode === 'guess' ? ' selected' : '');
   document.getElementById('modeCardBattle').className = 'mode-card' + (mode === 'battle' ? ' selected' : '');
+  document.getElementById('modeCardHulls').className = 'mode-card' + (mode === 'hulls' ? ' selected' : '');
   document.getElementById('modeSelectedLabel').style.display = 'block';
   document.getElementById('modeSelectedLabel').textContent =
     mode === 'giveaway' ? '▶ CONSTELLATION GIVEAWAY MODE SELECTED' :
     mode === 'quiz'     ? '▶ COMMANDER QUIZ MODE SELECTED' :
     mode === 'guess' ? '▶ COMMANDER GUESS MODE SELECTED' :
-    mode === 'battle' ? '▶ GRID BATTLE MODE SELECTED' : '▶ MEMORY MATCH MODE SELECTED';             // ADD
+    mode === 'battle' ? '▶ GRID BATTLE MODE SELECTED' :
+    mode === 'hulls' ? '▶ HULLS & WEAPONS QUIZ MODE SELECTED' : '▶ MEMORY MATCH MODE SELECTED';             // ADD
 
   document.getElementById('giveawaySetup').style.display = mode === 'giveaway' ? 'block' : 'none';
   document.getElementById('quizSetup').style.display    = mode === 'quiz'      ? 'block' : 'none';
   document.getElementById('memorySetup').style.display  = mode === 'memory'    ? 'block' : 'none';  // ADD
   document.getElementById('guessSetup').style.display = mode === 'guess' ? 'block' : 'none';
   document.getElementById('battleSetup').style.display = mode === 'battle' ? 'block' : 'none';
+  document.getElementById('hullsSetup').style.display = mode === 'hulls' ? 'block' : 'none';
 
 if (mode === 'giveaway') initGiveawaySetup();
 else if (mode === 'quiz') initQuizSetup();
 else if (mode === 'memory') initMemorySetup();
 else if (mode === 'guess') initGuessSetup();
 else if (mode === 'battle') { initBattleSetup(); renderBattlePrizeGrid(); }
+else if (mode === 'hulls') initHullsSetup();
 
 
 }
@@ -1046,6 +1280,18 @@ async function initAdminSetup() {
   if (cpInp) cpInp.value = battleConsolation;
   document.getElementById('battleDashPanel').style.display = 'block';
   loadBattleDashboard(); subscribeToBattleAdmin();
+} else if (detectedMode === 'hulls') {
+  selectMode('hulls');
+  activeHullsId = data[0].id;
+  hullsPrizes = gd.prizes || Array(HULLS_TOP_N).fill('');
+  hullsQCount = gd.q_count || 10;
+  hullsConsolationPrize = gd.consolation_prize || '';
+  renderHullsPrizeGrid();
+  const cpInp = document.getElementById('hulls-consolation-prize');
+  if (cpInp) cpInp.value = hullsConsolationPrize;
+  document.getElementById('hullsDashPanel').style.display = 'block';
+  loadHullsDashboard();
+  subscribeToHullsAdmin();
 }
 await checkAndResumeTimer(gd, data[0].id);
   }
@@ -1100,10 +1346,8 @@ async function loadPlayerHistory() {
     return;
   }
 
-  // Score-based modes need every player's claim (not just mine) to know my real rank
-  // and therefore which prize I actually won.
   const scoreGameIds = participated
-    .filter(g => ['quiz', 'memory', 'guess', 'battle'].includes(g.data?.mode))
+    .filter(g => ['quiz', 'memory', 'guess', 'battle', 'hulls'].includes(g.data?.mode))
     .map(g => g.id);
 
   const claimsByGame = {};
@@ -1124,7 +1368,6 @@ async function loadPlayerHistory() {
     const date   = gd?.created_at ? new Date(gd.created_at).toLocaleDateString() : '—';
     const isActive = gd?.active === true;
 
-    // Build summary line and prize display
     let scoreHtml = '', prizeHtml = '';
 
     if (mode === 'giveaway') {
@@ -1150,26 +1393,17 @@ async function loadPlayerHistory() {
         ? `<span style="color:var(--purple);">${claim.score ?? '?'}/${totalQ}</span> <span style="color:var(--purple);font-weight:700;">· ${myTimeSec}</span>`
         : `<span style="color:var(--purple);">${claim.score ?? '?'}/${totalQ}</span>`;
       const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
-      prizeHtml = myPrize
-        ? `<span style="color:var(--gold);">🏆 ${myPrize}</span>`
-        : consol
-        ? `<span style="color:var(--orange);">${consol}</span>`
-        : '';
+      prizeHtml = myPrize ? `<span style="color:var(--gold);">🏆 ${myPrize}</span>` : consol ? `<span style="color:var(--orange);">${consol}</span>` : '';
 
     } else if (mode === 'memory') {
       const prizes = gd?.prizes || [];
       const consol = gd?.consolation_prize || '';
       const timeSec = claim.time_taken ? Math.round(claim.time_taken/1000)+'s' : '?';
-      scoreHtml = `<span style="color:#00ffcc;">${timeSec} · ${claim.score ?? '?'}/${MEMORY_PAIR_COUNT} pairs</span>`;
-      const ranked = (claimsByGame[game.id] || []).slice()
-        .sort((a, b) => (a.time_taken - b.time_taken));
+      scoreHtml = `<span style="color:#00ffcc;">${timeSec} · ${claim.score ?? '?'}/12 pairs</span>`;
+      const ranked = (claimsByGame[game.id] || []).slice().sort((a, b) => (a.time_taken - b.time_taken));
       const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
       const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
-      prizeHtml = myPrize
-        ? `<span style="color:#00ffcc;">🏆 ${myPrize}</span>`
-        : consol
-        ? `<span style="color:var(--orange);">${consol}</span>`
-        : '';
+      prizeHtml = myPrize ? `<span style="color:#00ffcc;">🏆 ${myPrize}</span>` : consol ? `<span style="color:var(--orange);">${consol}</span>` : '';
 
     } else if (mode === 'guess') {
       const total  = gd?.count || gd?.commanders?.length || '?';
@@ -1181,36 +1415,39 @@ async function loadPlayerHistory() {
       scoreHtml = tiedWithOthers
         ? `<span style="color:#ffa500;">${claim.score ?? '?'}/${maxPts} pts</span> <span style="color:#ffa500;font-weight:700;">· ${myTimeSec}</span>`
         : `<span style="color:#ffa500;">${claim.score ?? '?'}/${maxPts} pts</span>`;
-      const ranked = (claimsByGame[game.id] || []).slice()
-        .sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+      const ranked = (claimsByGame[game.id] || []).slice().sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
       const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
       const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
-      prizeHtml = myPrize
-        ? `<span style="color:#ffa500;">🏆 ${myPrize}</span>`
-        : consol
-        ? `<span style="color:var(--orange);">${consol}</span>`
-        : '';
+      prizeHtml = myPrize ? `<span style="color:#ffa500;">🏆 ${myPrize}</span>` : consol ? `<span style="color:var(--orange);">${consol}</span>` : '';
     } else if (mode === 'battle') {
       const prizes = gd?.prizes || [];
       const consol = gd?.consolation_prize || '';
-      const ranked = (claimsByGame[game.id] || []).slice()
-        .sort((a, b) => (b.score - a.score) || ((a.time_taken||Infinity) - (b.time_taken||Infinity)));
+      const ranked = (claimsByGame[game.id] || []).slice().sort((a, b) => (b.score - a.score) || ((a.time_taken||Infinity) - (b.time_taken||Infinity)));
       const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
       scoreHtml = `<span style="color:var(--accent3);">${claim.score ?? '?'} pts</span>`;
       const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
-      prizeHtml = myPrize
-        ? `<span style="color:var(--accent3);">🏆 ${myPrize}</span>`
-        : consol
-        ? `<span style="color:var(--orange);">${consol}</span>`
-        : '';
+      prizeHtml = myPrize ? `<span style="color:var(--accent3);">🏆 ${myPrize}</span>` : consol ? `<span style="color:var(--orange);">${consol}</span>` : '';
+    } else if (mode === 'hulls') {
+      const totalQ  = gd?.q_count || gd?.questions?.length || '?';
+      const prizes  = gd?.prizes || [];
+      const consol  = gd?.consolation_prize || '';
+      const ranked = (claimsByGame[game.id] || []).slice()
+        .sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+      const myRank = ranked.findIndex(c => c.game_user_id === currentUser.gameId) + 1;
+      const tiedWithOthers = (claimsByGame[game.id] || []).filter(c => c.score === claim.score).length > 1;
+      const myTimeSec = claim.time_taken ? Math.round(claim.time_taken/1000)+'s' : '?';
+      scoreHtml = tiedWithOthers
+        ? `<span style="color:#4d94ff;">${claim.score ?? '?'}/${totalQ}</span> <span style="color:#4d94ff;font-weight:700;">· ${myTimeSec}</span>`
+        : `<span style="color:#4d94ff;">${claim.score ?? '?'}/${totalQ}</span>`;
+      const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
+      prizeHtml = myPrize ? `<span style="color:var(--gold);">🏆 ${myPrize}</span>` : consol ? `<span style="color:var(--orange);">${consol}</span>` : '';
     }
 
-    const modeColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : mode === 'battle' ? 'var(--accent3)' : 'var(--gold)';
+    const modeColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : mode === 'battle' ? 'var(--accent3)' : mode === 'hulls' ? '#4d94ff' : 'var(--gold)';
     const statusDot = isActive
       ? `<span style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px rgba(57,255,20,0.6);flex-shrink:0;"></span>`
       : `<span style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block;flex-shrink:0;"></span>`;
 
-    // Prize table for detail section — highlight the row I actually won
     const prizes = gd?.prizes || [];
     const consol = gd?.consolation_prize || '';
     let myRankForTable = -1;
@@ -1225,7 +1462,7 @@ async function loadPlayerHistory() {
         <div style="font-size:9px;letter-spacing:2px;color:${modeColor};margin-bottom:6px;">✦ PRIZE TABLE</div>
         <div style="background:var(--bg3);border:1px solid ${modeColor}22;border-radius:3px;overflow:hidden;">
           ${prizes.map((p,i)=>{const rl=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;const isMine=(i+1)===myRankForTable;return`<div style="display:flex;gap:10px;padding:6px 12px;border-bottom:1px solid ${modeColor}11;font-size:10px;${isMine?`background:${modeColor}14;`:''}"><span style="min-width:36px;color:${modeColor};">${rl}</span><span style="color:#ffe8aa;flex:1;">${p}</span>${isMine?`<span style="color:${modeColor};font-size:9px;">◀ YOU</span>`:''}</div>`;}).join('')}
-          ${consol?(()=>{const isMine=myRankForTable>prizes.length&&myRankForTable>0;return`<div style="display:flex;gap:10px;padding:6px 12px;font-size:10px;${isMine?'background:rgba(255,107,53,0.10);':''}"><span style="min-width:36px;color:var(--orange);">rest</span><span style="color:#ffe8aa;flex:1;">${consol}</span>${isMine?'<span style="color:var(--orange);font-size:9px;">◀ YOU</span>':''}</div>`;})():''}
+          ${consol?(()=> {const isMine=myRankForTable>prizes.length&&myRankForTable>0;return`<div style="display:flex;gap:10px;padding:6px 12px;font-size:10px;${isMine?'background:rgba(255,107,53,0.10);':''}"><span style="min-width:36px;color:var(--orange);">rest</span><span style="color:#ffe8aa;flex:1;">${consol}</span>${isMine?'<span style="color:var(--orange);font-size:9px;">◀ YOU</span>':''}</div>`;})():''}
         </div>
       </div>`;
     }
@@ -1248,9 +1485,54 @@ async function loadPlayerHistory() {
       <div style="display:none;padding:12px 14px;border-top:1px solid var(--border2);">
         <div style="font-size:9px;color:var(--text3);letter-spacing:1px;margin-bottom:6px;">GAME ID: ${game.id}</div>
         ${prizeTableHtml}
+        ${renderReplayLayout(mode, claim, gd, game.id)}
       </div>`;
     body.appendChild(wrap);
   });
+}
+
+// ══════════════════════════════════════════════════════
+// REPLAY RENDERING HELPERS
+// ══════════════════════════════════════════════════════
+function renderReplayLayout(mode, claim, gd, gameId) {
+  if (!claim) return '';
+  let html = `<div style="margin-top:10px; padding:10px; background:rgba(0,0,0,0.2); border-radius:4px; border:1px solid rgba(255,255,255,0.05);">`;
+  
+  if (mode === 'memory') {
+    const turns = claim.turns || [];
+    html += `<div style="font-size:9px; color:#00ffcc; letter-spacing:1px; margin-bottom:6px;">🎞️ MATCH REPLAY TIMELINE (${turns.length} total flips)</div>`;
+    if (!turns.length) {
+      html += `<div style="font-size:10px; color:var(--text3);">No replay timeline sequence captured.</div>`;
+    } else {
+      html += `<div style="display:flex; flex-wrap:wrap; gap:4px; max-height:120px; overflow-y:auto; padding-right:4px;">`;
+      turns.forEach((turn, idx) => {
+        const isMatch = turn.match === true;
+        html += `<div style="font-size:9px; background:var(--bg3); border:1px solid ${isMatch ? '#00ffcc44' : 'rgba(255,255,255,0.07)'}; padding:3px 6px; border-radius:2px; display:flex; align-items:center; gap:4px;">
+          <span style="color:var(--text3);">#${idx+1}</span>
+          <span style="color:${isMatch ? '#00ffcc' : 'var(--text2)'}; font-weight:${isMatch?'700':'400'};">Cards [${turn.c1}, ${turn.c2}]</span>
+          <span>${isMatch ? '✅' : '❌'}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+  } else if (mode === 'quiz' || mode === 'guess' || mode === 'hulls') {
+    const tracking = claim.tab_switches || claim.data?.tab_switches || 0;
+    const color = mode === 'quiz' ? 'var(--purple)' : mode === 'hulls' ? '#4d94ff' : '#ffa500';
+    html += `<div style="font-size:9px; color:${color}; letter-spacing:1px; margin-bottom:4px;">🛡️ ANTI-CHEAT INTEGRITY LOGS</div>`;
+    html += `<div style="font-size:11px; color:${tracking > 0 ? 'var(--danger)' : 'var(--green)'};">
+      ${tracking > 0 ? `⚠️ Detected <strong>${tracking}</strong> unexpected tab switches during session.` : '✅ Clean session timeline. No layout window switches recorded.'}
+    </div>`;
+  } else if (mode === 'battle') {
+    html += `<div style="display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:9px; color:var(--accent3); letter-spacing:1px;">🎯 BATTLE REPLAY</div>
+      ${gameId ? `<a href="replay.html?game=${encodeURIComponent(gameId)}" target="_blank" class="btn btn-sm" style="color:var(--accent3);border-color:var(--accent3);text-decoration:none;font-size:9px;padding:5px 10px;">▶ WATCH REPLAY</a>` : ''}
+    </div>`;
+  } else {
+    html += `<div style="font-size:10px; color:var(--text3);">No external telemetry map recorded for this configuration.</div>`;
+  }
+  
+  html += `</div>`;
+  return html;
 }
 async function adminEraseClaim(claimId, username) {
   if (!confirm(`Remove claim by "${username}"?`)) return;
@@ -1347,6 +1629,20 @@ function buildQuizSuggestionsHtml(query, inputIdx) {
   if (!matches.length) return `<div class="sug-item" style="color:rgba(255,255,255,0.25);pointer-events:none;">No matches</div>`;
   return matches.map(item => `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}','quiz')">${item}</div>`).join('');
 }
+function buildHullsSuggestionsHtml(query, inputIdx) {
+  const q = query.toLowerCase().trim();
+  if (!q) {
+    let html = '';
+    REWARD_SUGGESTIONS.forEach(group => {
+      html += `<div class="sug-category">${group.category}</div>`;
+      group.items.forEach(item => { html += `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}','hulls')">${item}</div>`; });
+    });
+    return html;
+  }
+  const matches = ALL_SUGGESTIONS_FLAT.filter(s => s.toLowerCase().includes(q));
+  if (!matches.length) return `<div class="sug-item" style="color:rgba(255,255,255,0.25);pointer-events:none;">No matches</div>`;
+  return matches.map(item => `<div class="sug-item" onmousedown="selectSuggestion(${inputIdx},'${item.replace(/'/g,"\\'")}','hulls')">${item}</div>`).join('');
+}
 function selectSuggestion(idx, value, type) {
   if (type === 'giveaway') {
     rewards[idx] = value;
@@ -1354,6 +1650,19 @@ function selectSuggestion(idx, value, type) {
     if (inp) { inp.value = value; inp.classList.add('filled'); }
     closeSuggestions(idx, 'giveaway');
     updateProgress();
+  } else if (type === 'hulls') {
+    if (idx === 'consolation') {
+      hullsConsolationPrize = value;
+      const inp = document.getElementById('hulls-consolation-prize');
+      if (inp) { inp.value = value; inp.classList.add('filled'); }
+      closeSuggestions('consolation', 'hulls');
+    } else {
+      hullsPrizes[idx] = value;
+      const inp = document.getElementById('hprize-' + idx);
+      if (inp) { inp.value = value; inp.classList.add('filled'); }
+      closeSuggestions(idx, 'hulls');
+      updateHullsProgress();
+    }
   } else {
     if (idx === 'consolation') {
       consolationPrize = value;
@@ -1370,24 +1679,26 @@ function selectSuggestion(idx, value, type) {
   }
 }
 function openSuggestions(idx, type, accentColor) {
-  const key = (type === 'quiz') ? `qsug-dd-${idx}` : `sug-dd-${idx}`;
-  const inpKey = (type === 'quiz') ? `qprize-${idx}` : `reward-${idx}`;
+  const key = (type === 'quiz') ? `qsug-dd-${idx}` : (type === 'hulls') ? `hsug-dd-${idx}` : `sug-dd-${idx}`;
+  const inpKey = idx === 'consolation'
+    ? (type === 'quiz' ? 'consolation-prize' : type === 'hulls' ? 'hulls-consolation-prize' : 'mem-consolation-prize')
+    : (type === 'quiz' ? `qprize-${idx}` : type === 'hulls' ? `hprize-${idx}` : `reward-${idx}`);
   const dd = document.getElementById(key);
   const inp = document.getElementById(inpKey);
   if (!dd || !inp) return;
-  dd.innerHTML = type === 'quiz' ? buildQuizSuggestionsHtml(inp.value || '', idx) : buildSuggestionsHtml(inp.value || '', idx, accentColor);
+  dd.innerHTML = type === 'quiz' ? buildQuizSuggestionsHtml(inp.value || '', idx) : type === 'hulls' ? buildHullsSuggestionsHtml(inp.value || '', idx) : buildSuggestionsHtml(inp.value || '', idx, accentColor);
   dd.classList.add('open');
 }
 function closeSuggestions(idx, type) {
-  const key = (type === 'quiz') ? `qsug-dd-${idx}` : `sug-dd-${idx}`;
+  const key = (type === 'quiz') ? `qsug-dd-${idx}` : (type === 'hulls') ? `hsug-dd-${idx}` : `sug-dd-${idx}`;
   const dd = document.getElementById(key);
   if (dd) dd.classList.remove('open');
 }
 function filterSuggestions(idx, type, accentColor, val) {
-  const key = (type === 'quiz') ? `qsug-dd-${idx}` : `sug-dd-${idx}`;
+  const key = (type === 'quiz') ? `qsug-dd-${idx}` : (type === 'hulls') ? `hsug-dd-${idx}` : `sug-dd-${idx}`;
   const dd = document.getElementById(key);
   if (!dd || !dd.classList.contains('open')) return;
-  dd.innerHTML = type === 'quiz' ? buildQuizSuggestionsHtml(val, idx) : buildSuggestionsHtml(val, idx, accentColor);
+  dd.innerHTML = type === 'quiz' ? buildQuizSuggestionsHtml(val, idx) : type === 'hulls' ? buildHullsSuggestionsHtml(val, idx) : buildSuggestionsHtml(val, idx, accentColor);
 }
 function renderAdminCards() {
   const grid = document.getElementById('constGrid'); grid.innerHTML = '';
@@ -1666,9 +1977,13 @@ async function publishQuiz() {
 // ══════════════════════════════════════════════════════
 // CLEAR GAME
 // ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// CLEAR GAME — fixed to include Hulls & Weapons Quiz
+// Replace the existing clearGame() function in index.html with this.
+// ══════════════════════════════════════════════════════
 async function clearGame() {
   stopGameTimer();
-  const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId || battleGameId;
+  const gid = activeGameId || activeQuizId || activeMemoryId || guessGameId || battleGameId || activeHullsId;
   if (!gid) return;
   if (!confirm('End this game? Players will see their results revealed.')) return;
 
@@ -1679,7 +1994,7 @@ async function clearGame() {
     await battleOnGameEnd(gid);
   }
 
-  const updatedData = { ...(gameData?.data || {}), active: false, revealed: true };
+  const updatedData = { ...(gameData?.data || {}), active: false, revealed: true, ended_at: new Date().toISOString() };
   await sb.from('constellation_games').update({ data: updatedData }).eq('id', gid);
 
   // Clean up channels
@@ -1688,6 +2003,7 @@ async function clearGame() {
   if (memoryChannel)   { sb.removeChannel(memoryChannel);   memoryChannel   = null; }
   if (guessChannel)    { sb.removeChannel(guessChannel);    guessChannel    = null; }
   if (battleChannel)   { sb.removeChannel(battleChannel);   battleChannel   = null; }
+  if (hullsChannel)    { sb.removeChannel(hullsChannel);    hullsChannel    = null; }
 
   // Reset all active game IDs
   activeGameId   = null;
@@ -1695,6 +2011,7 @@ async function clearGame() {
   activeMemoryId = null;
   guessGameId    = null;
   battleGameId   = null;
+  activeHullsId  = null;
 
   // Reset prizes/state
   guessPrizes    = Array(GUESS_TOP_N).fill('');
@@ -1702,12 +2019,16 @@ async function clearGame() {
   guessSubmitted = false;
   battlePrizes   = Array(BATTLE_TOP_N).fill('');
   battleConsolation = '';
+  hullsPrizes    = Array(HULLS_TOP_N).fill('');
+  hullsConsolationPrize = '';
+  hullsSubmitted = false;
 
   // Hide all game panels
   document.getElementById('adminDashPanel').style.display  = 'none';
   document.getElementById('quizDashPanel').style.display   = 'none';
   document.getElementById('memoryDashPanel').style.display = 'none';
   document.getElementById('guessDashPanel').style.display  = 'none';
+  document.getElementById('hullsDashPanel').style.display  = 'none';
   document.getElementById('gameStatusRow').style.display   = 'none';
   document.getElementById('gameStatusChip').innerHTML      = '<span class="status-chip status-inactive">ENDED</span>';
 
@@ -1717,6 +2038,7 @@ async function clearGame() {
   document.getElementById('memorySetup').style.display   = 'none';
   document.getElementById('guessSetup').style.display    = 'none';
   document.getElementById('battleSetup').style.display   = 'none';
+  document.getElementById('hullsSetup').style.display    = 'none';
   document.getElementById('modeSelectedLabel').style.display = 'none';
 
   // Deselect mode cards
@@ -1725,6 +2047,7 @@ async function clearGame() {
   document.getElementById('modeCardMemory').className   = 'mode-card';
   document.getElementById('modeCardGuess').className    = 'mode-card';
   document.getElementById('modeCardBattle').className   = 'mode-card';
+  document.getElementById('modeCardHulls').className    = 'mode-card';
 
   currentMode = null;
 
@@ -1839,6 +2162,84 @@ function subscribeToQuizAdmin() {
 }
 
 // ══════════════════════════════════════════════════════
+// PLAYER EVENT BANNER (mode-agnostic, LIVE / ENDED / hidden)
+// ══════════════════════════════════════════════════════
+const EVENT_BANNER_INFO = {
+  giveaway: { icon:'🌟', label:'CONSTELLATION GIVEAWAY', rgb:'255, 215, 0',  desc:'Sub-space loot drop sequence initiated.' },
+  quiz:     { icon:'🧠', label:'COMMANDER QUIZ',          rgb:'191, 95, 255', desc:'Testing fleet officer intelligence matrices.' },
+  memory:   { icon:'🧩', label:'MEMORY MATCH',            rgb:'0, 255, 204',  desc:'Sync cognitive core grid arrays.' },
+  guess:    { icon:'🎖️', label:'COMMANDER GUESS',         rgb:'255, 107, 53', desc:'Reconnaissance intelligence confirmation.' },
+  battle:   { icon:'⚔️', label:'GRID BATTLE',             rgb:'0, 212, 255',  desc:'Tactical sector war simulation operational.' },
+  hulls:    { icon:'🚀', label:'HULLS & WEAPONS QUIZ',    rgb:'77, 148, 255', desc:'Analyzing hull integrity and weapon systems.' },
+};
+const EVENT_BANNER_ENDED_WINDOW_HOURS = 12;
+
+function showEventBanner(mode, status) {
+  const el = document.getElementById('playerEventBanner');
+  if (!el) return;
+  const info = EVENT_BANNER_INFO[mode] || EVENT_BANNER_INFO.giveaway;
+  const ended = status === 'ENDED';
+  el.style.setProperty('--banner-rgb', info.rgb);
+  el.style.display = 'flex';
+  el.innerHTML = `
+    <div class="art-banner-overlay"></div>
+    <div class="art-icon">${info.icon}</div>
+    <div class="art-text-block">
+      <div class="art-label">${info.label}</div>
+      <div class="art-subtext">${ended ? 'Event has ended — results below.' : info.desc}</div>
+    </div>
+    <span class="status-chip ${ended ? 'status-inactive' : 'status-active'}">${ended ? 'ENDED' : 'LIVE'}</span>
+  `;
+  el.className = 'art-banner';
+}
+
+function hideEventBanner() {
+  const el = document.getElementById('playerEventBanner');
+  if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+// Determines LIVE / ENDED(<12h) / hidden state for the most recent game.
+// Pass a pre-fetched game row to skip the query. Returns true if the banner is shown.
+async function updatePlayerEventBanner(activeGame) {
+  let game = activeGame;
+  if (!game) {
+    const { data } = await sb
+      .from('constellation_games')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    game = data && data[0];
+  }
+  if (!game) { hideEventBanner(); return false; }
+
+  const gd = game.data || {};
+  const mode = gd.mode || 'giveaway';
+
+  if (gd.active === true) {
+    showEventBanner(mode, 'LIVE');
+    return true;
+  }
+  if (gd.ended_at) {
+    const hoursSince = (Date.now() - new Date(gd.ended_at).getTime()) / 3600000;
+    if (hoursSince < EVENT_BANNER_ENDED_WINDOW_HOURS) {
+      showEventBanner(mode, 'ENDED');
+      return true;
+    }
+  }
+  hideEventBanner();
+  return false;
+}
+
+let bannerRefreshInterval = null;
+function startBannerRefresh() {
+  if (bannerRefreshInterval) return;
+  bannerRefreshInterval = setInterval(() => updatePlayerEventBanner(), 5 * 60 * 1000);
+}
+function stopBannerRefresh() {
+  if (bannerRefreshInterval) { clearInterval(bannerRefreshInterval); bannerRefreshInterval = null; }
+}
+
+// ══════════════════════════════════════════════════════
 // PLAYER VIEW LOADER
 // ══════════════════════════════════════════════════════
 async function loadPlayerView() {
@@ -1860,6 +2261,8 @@ async function loadPlayerView() {
   const gd = game.data;
   const mode = gd.mode || 'giveaway';
 
+  updatePlayerEventBanner(game);
+
   if (mode === 'quiz') {
     activeQuizId = game.id;
     document.getElementById('playerQuizPanel').style.display = 'block';
@@ -1877,7 +2280,10 @@ async function loadPlayerView() {
   battleGameId = game.id;
   document.getElementById('playerBattlePanel').style.display = 'block';
   loadPlayerBattle(gd);
-} else {
+} else if (mode === 'hulls') {
+  activeHullsId = game.id;
+  document.getElementById('playerHullsPanel').style.display = 'block';
+  loadPlayerHulls(gd);} else {
     activeGameId = game.id;
     N = gd.n;
     chosen = gd.constellations.map(cd => {
@@ -2330,7 +2736,13 @@ function hideAllPlayerGamePanels() {
 async function checkForEndedGame() {
   // kept for realtime callbacks that call this path
   await loadPlayerHistory();
-  showNoGame();
+  const bannerShown = await updatePlayerEventBanner();
+  if (bannerShown) {
+    // Recently-ended event: banner communicates status, no need for the generic panel too
+    document.getElementById('playerNoGamePanel').style.display = 'none';
+  } else {
+    showNoGame();
+  }
 }
 function showNoGame(msg) {
   hideAllPlayerGamePanels();
@@ -2533,11 +2945,19 @@ function categorizeMcq(q) {
   return q.category || 'ability_mechanics';
 }
 let mcqActiveCategory = 'ALL';
+let mcqModalContext = 'quiz'; // 'quiz' | 'hulls' — which bank/state the picker modal is editing
 
-function openMcqModal() {
+function mcqBank()       { return mcqModalContext === 'hulls' ? HULLS_BANK       : QUIZ_BANK; }
+function mcqCategories() { return mcqModalContext === 'hulls' ? HULLS_CATEGORIES : QUIZ_CATEGORIES; }
+function mcqSelectedSet(){ return mcqModalContext === 'hulls' ? hullsPickerSelected : mcqPickerSelected; }
+
+function openMcqModal(context) {
+  mcqModalContext = context || 'quiz';
   mcqActiveCategory = 'ALL';
   document.getElementById('mcqModalOverlay').style.display = 'flex';
   document.getElementById('mcqSearch').value = '';
+  const dot = document.querySelector('#mcqModalOverlay .mcq-modal-hd > div');
+  if (dot) dot.style.background = mcqModalContext === 'hulls' ? '#4d94ff' : 'var(--purple)';
   renderMcqFilterBtns();
   renderMcqList();
 }
@@ -2545,24 +2965,31 @@ function closeMcqModal() {
   document.getElementById('mcqModalOverlay').style.display = 'none';
 }
 function confirmMcqSelection() {
-  handPickedQuestions = [...mcqPickerSelected].map(i => QUIZ_BANK[i]);
-  quizQCount = handPickedQuestions.length;
-  updateHandPickStatus();
+  if (mcqModalContext === 'hulls') {
+    hullsHandPickedQuestions = [...hullsPickerSelected].map(i => HULLS_BANK[i]);
+    hullsQCount = hullsHandPickedQuestions.length;
+    updateHullsHandPickStatus();
+  } else {
+    handPickedQuestions = [...mcqPickerSelected].map(i => QUIZ_BANK[i]);
+    quizQCount = handPickedQuestions.length;
+    updateHandPickStatus();
+  }
   closeMcqModal();
 }
 function renderMcqFilterBtns() {
   const c = document.getElementById('mcqFilterBtns'); c.innerHTML = '';
+  const bank = mcqBank(), categories = mcqCategories();
 
   // ALL button
   const allBtn = document.createElement('button');
   allBtn.className = 'mcq-filter-btn' + (mcqActiveCategory === 'ALL' ? ' active' : '');
-  allBtn.textContent = `ALL (${QUIZ_BANK.length})`;
+  allBtn.textContent = `ALL (${bank.length})`;
   allBtn.onclick = () => { mcqActiveCategory = 'ALL'; renderMcqFilterBtns(); renderMcqList(); };
   c.appendChild(allBtn);
 
-  // One button per QUIZ_CATEGORY
-  QUIZ_CATEGORIES.forEach(cat => {
-    const count = QUIZ_BANK.filter(q => q.category === cat.key).length;
+  // One button per category
+  categories.forEach(cat => {
+    const count = bank.filter(q => q.category === cat.key).length;
     if (!count) return; // skip empty categories
     const b = document.createElement('button');
     b.className = 'mcq-filter-btn' + (mcqActiveCategory === cat.key ? ' active' : '');
@@ -2574,11 +3001,12 @@ function renderMcqFilterBtns() {
 function renderMcqList() {
   const search = (document.getElementById('mcqSearch')?.value || '').toLowerCase();
   const list = document.getElementById('mcqList'); list.innerHTML = '';
-  const selected = mcqPickerSelected.size;
+  const bank = mcqBank(), categories = mcqCategories(), selectedSet = mcqSelectedSet();
+  const selected = selectedSet.size;
   document.getElementById('mcqPickCount').textContent = `${selected} selected`;
   document.getElementById('mcqPickStatus').textContent = selected > 0 ? `${selected} question${selected!==1?'s':''} selected — click USE SELECTED to confirm` : 'Click questions to select them';
 
-  const filtered = QUIZ_BANK.map((q, i) => ({ q, i }))
+  const filtered = bank.map((q, i) => ({ q, i }))
     .filter(({ q }) => mcqActiveCategory === 'ALL' || q.category === mcqActiveCategory)
     .filter(({ q }) => !search || q.question.toLowerCase().includes(search) || q.answer.toLowerCase().includes(search));
 
@@ -2587,17 +3015,17 @@ function renderMcqList() {
     return;
   }
   filtered.forEach(({ q, i }) => {
-    const isSel = mcqPickerSelected.has(i);
+    const isSel = selectedSet.has(i);
     const row = document.createElement('div');
     row.className = 'mcq-q-row' + (isSel ? ' selected' : '');
     row.innerHTML = `<div class="mcq-q-check ${isSel ? 'checked' : ''}">${isSel ? '✓' : ''}</div>
       <div>
         <div class="mcq-q-text">${q.question}</div>
-        <div class="mcq-q-meta">Answer: <span style="color:var(--green);">${q.answer}</span> · ${QUIZ_CATEGORIES.find(c => c.key === q.category)?.label || q.category}</div>
+        <div class="mcq-q-meta">Answer: <span style="color:var(--green);">${q.answer}</span> · ${categories.find(c => c.key === q.category)?.label || q.category}</div>
       </div>`;
     row.onclick = () => {
-      if (mcqPickerSelected.has(i)) { mcqPickerSelected.delete(i); }
-      else { mcqPickerSelected.add(i); }
+      if (selectedSet.has(i)) { selectedSet.delete(i); }
+      else { selectedSet.add(i); }
       renderMcqList();
     };
     list.appendChild(row);
@@ -2722,20 +3150,21 @@ function renderHistoryBody(game, gd, claims, mode) {
   if (mode === 'quiz')   return renderHistoryQuiz(gd, claims);
   if (mode === 'memory') return renderHistoryMemory(gd, claims);
   if (mode === 'guess')  return renderHistoryGuess(gd, claims);
-  if (mode === 'battle') return renderHistoryBattle(gd, claims);
+  if (mode === 'battle') return renderHistoryBattle(gd, claims, game.id);
   return renderHistoryGiveaway(gd, claims);
 }
 
-function renderHistoryBattle(gd, claims) {
+function renderHistoryBattle(gd, claims, gameId) {
   const prizes = gd.prizes || [];
   const consolation = gd.consolation_prize || '';
 
   claims = claims.slice().sort((a, b) => (b.score - a.score) || ((a.time_taken||Infinity) - (b.time_taken||Infinity)));
 
-  let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+  let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
     <div style="font-size:10px;color:var(--text2);">Grid: <span style="color:var(--accent3);">10×10</span></div>
     <div style="font-size:10px;color:var(--text2);">Players: <span style="color:var(--accent3);">${claims.length}</span></div>
     ${consolation ? `<div style="font-size:10px;color:var(--text2);">Consolation: <span style="color:var(--orange);">${consolation}</span></div>` : ''}
+    ${gameId ? `<a href="replay.html?game=${encodeURIComponent(gameId)}" target="_blank" class="btn btn-sm" style="margin-left:auto;color:var(--accent3);border-color:var(--accent3);text-decoration:none;">▶ WATCH REPLAY</a>` : ''}
   </div>`;
 
   if (!claims.length) return html + '<div style="font-size:10px;color:var(--text3);">No submissions yet.</div>';

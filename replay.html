@@ -31,12 +31,15 @@
   .game-id{font-family:'Orbitron',monospace;font-size:12px;color:var(--accent3);}
   .game-status{display:inline-block;margin-left:8px;font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:3px;border:1px solid var(--border2);color:var(--text3);}
   .game-status.live{color:var(--green);border-color:rgba(57,255,20,0.4);}
+  .back-link{display:inline-flex;align-items:center;gap:6px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--text2);text-decoration:none;margin-bottom:18px;transition:color .15s;}
+  .back-link:hover{color:var(--accent3);}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>⚔ GRID BATTLE — LAST REPLAY</h1>
-  <div class="sub">Finds the most recent battle game — click below to play it back</div>
+  <a href="index.html" class="back-link">← BACK TO HUB</a>
+  <h1 id="pageTitle">⚔ GRID BATTLE — LAST REPLAY</h1>
+  <div class="sub" id="pageSub">Finds the most recent battle game — click below to play it back</div>
 
   <div class="panel" id="statusPanel">
     <div class="panel-title">▶ STATUS</div>
@@ -60,6 +63,16 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 let sb = null;
 let lastClaims = null;
+
+// If a specific game id is passed in the URL (?game=xxxx), replay that
+// exact battle instead of just grabbing the most recent one.
+const urlParams = new URLSearchParams(window.location.search);
+const requestedGameId = urlParams.get('game');
+
+if (requestedGameId) {
+  document.getElementById('pageTitle').textContent = '⚔ GRID BATTLE — REPLAY';
+  document.getElementById('pageSub').textContent = `Loading battle ${requestedGameId} — click below to play it back`;
+}
 
 const statusMsg = document.getElementById('statusMsg');
 const retryBtn = document.getElementById('retryBtn');
@@ -86,16 +99,32 @@ async function run() {
     return fail('Could not init Supabase client: ' + e.message);
   }
 
-  setMsg('Finding most recent battle game...', '');
-  const { data: games, error: gErr } = await sb
-    .from('constellation_games')
-    .select('*')
-    .order('created_at', { ascending: false });
+  let lastBattle = null;
 
-  if (gErr) return fail('Error loading games: ' + gErr.message);
+  if (requestedGameId) {
+    setMsg(`Loading battle <span class="game-id">${requestedGameId}</span>...`, '', true);
+    const { data: game, error: gErr } = await sb
+      .from('constellation_games')
+      .select('*')
+      .eq('id', requestedGameId)
+      .maybeSingle();
 
-  const lastBattle = (games || []).find(g => g.data && g.data.mode === 'battle');
-  if (!lastBattle) return fail('No grid battle games found yet.');
+    if (gErr) return fail('Error loading game: ' + gErr.message);
+    if (!game) return fail(`Game ${requestedGameId} not found.`);
+    if (!game.data || game.data.mode !== 'battle') return fail(`Game ${requestedGameId} is not a grid battle game.`);
+    lastBattle = game;
+  } else {
+    setMsg('Finding most recent battle game...', '');
+    const { data: games, error: gErr } = await sb
+      .from('constellation_games')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (gErr) return fail('Error loading games: ' + gErr.message);
+
+    lastBattle = (games || []).find(g => g.data && g.data.mode === 'battle');
+    if (!lastBattle) return fail('No grid battle games found yet.');
+  }
 
   const gd = lastBattle.data;
   const statusLabel = gd.active ? 'LIVE' : (gd.revealed ? 'REVEALED' : 'ENDED');

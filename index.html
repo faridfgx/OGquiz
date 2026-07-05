@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Constellation Hub</title>
 
-
 <!-- ── Discord / Social Link Preview (Open Graph) ── -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://stellar-events.site/">
@@ -22,9 +21,6 @@
 <meta name="twitter:description" content="Open Galaxy event platform — giveaway & quiz system.">
 <meta name="twitter:image" content="https://stellar-events.site/og-image.png">
 
-<!-- Discord embed color (used for the little accent bar on the left) -->
-<meta name="theme-color" content="#00d4ff">
-	
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -864,10 +860,12 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const REWARD_SUGGESTIONS = [
   { category: '9★ COMMANDERS', items: ['9* Dune Enforcers','9* Erebus Errants','9* Rays of Destiny','9* The Dictators','9* Rex Scuta','9* Death From Above','9* Javal','9* Lumos','9* Eva','9* Rayo','9* Titan'] },
   { category: 'LIFE BOATS', items: ['Divine life boat-7','Legendary life boat-7','Super Life Boat-7','life Boat-7'] },
-  { category: 'CURRENCY & PACKS', items: ['2000 Vouchers Pack','50000 GP','100000 GP','200000 GP','MVP','1000 Senior Ressources Pack','9999 CG','9999 BADGES','9999 Honor points'] },
+  { category: 'CURRENCY & PACKS', items: ['2000 Vouchers Pack','50000 GP','100000 GP','200000 GP','MVP','5000 Senior Ressources Pack','9999 CG','9999 BADGES','9999 Honor points'] },
   { category: 'CHIP MODULES', items: ['5X Orange Deadalus-X','5X Orange Charger-X','5X Orange Negator-X','5X Orange Caenus-X','5X Orange Accelerator-X','5X Orange Stabilizer-X'] },
-  { category: 'GEMS', items: ['30X EXP Diamond-V','50X Burning Triad-V','50X Guardian Triad-V','50X Giant Triad-V','30X Quadra Dodge Ruby-V','30X Quadra Speed Emerald-V','30X Quadra Dodge sapphire-V','30X Quadra Accuracy Ruby-V','30X Quadra Electron Emerald-V'] }
+  { category: 'GEMS', items: ['30X EXP Diamond-V','50X Burning Triad-V','50X Guardian Triad-V','50X Giant Triad-V','30X Quadra Dodge Ruby-V','30X Quadra Speed Emerald-V','30X Quadra Dodge sapphire-V','30X Quadra Accuracy Ruby-V','30X Quadra Electron Emerald-V'] },
+  { category: 'HIGH-TIER GP & MISC', items: ['420000 gp','250000 gp','25000 GP','420 constellation passes','100 adv galaxy transfers','winter planet for CG x1000','agt x100','og avatar'] }
 ];
+ 
 const ALL_SUGGESTIONS_FLAT = REWARD_SUGGESTIONS.flatMap(g => g.items);
 
 // ══════════════════════════════════════════════════════
@@ -3085,7 +3083,7 @@ async function loadHistory() {
     const date = gd.created_at ? new Date(gd.created_at).toLocaleString() : '—';
 
     const wrap = document.createElement('div'); wrap.className = 'history-game';
-    const headerColor = mode === 'quiz' ? 'var(--purple)' : 'var(--gold)';
+    const headerColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : mode === 'battle' ? 'var(--accent3)' : mode === 'hulls' ? '#4d94ff' : 'var(--gold)';
     const modeBadge = `<span class="hg-badge hg-badge-${mode}">${mode.toUpperCase()}</span>`;
     const statusBadge = isActive
       ? `<span class="hg-badge" style="border-color:rgba(57,255,20,0.4);color:var(--green);">LIVE</span>`
@@ -3172,7 +3170,46 @@ function renderHistoryBody(game, gd, claims, mode) {
   if (mode === 'memory') return renderHistoryMemory(gd, claims);
   if (mode === 'guess')  return renderHistoryGuess(gd, claims);
   if (mode === 'battle') return renderHistoryBattle(gd, claims, game.id);
+  if (mode === 'hulls')  return renderHistoryHulls(gd, claims);
   return renderHistoryGiveaway(gd, claims);
+}
+function renderHistoryHulls(gd, claims) {
+  const prizes      = gd.prizes || [];
+  const consolation = gd.consolation_prize || '';
+  const totalQ      = gd.q_count || (gd.questions?.length) || '?';
+  const qMode       = gd.q_mode || 'random';
+
+  claims.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
+
+  let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+    <div style="font-size:10px;color:var(--text2);">Questions: <span style="color:#4d94ff;">${totalQ}</span></div>
+    <div style="font-size:10px;color:var(--text2);">Selection: <span style="color:#4d94ff;">${qMode}</span></div>
+    <div style="font-size:10px;color:var(--text2);">Players: <span style="color:#4d94ff;">${claims.length}</span></div>
+    ${consolation ? `<div style="font-size:10px;color:var(--text2);">Consolation: <span style="color:var(--orange);">${consolation}</span></div>` : ''}
+  </div>`;
+
+  if (!claims.length) return html + '<div style="font-size:10px;color:var(--text3);">No submissions yet.</div>';
+
+  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>SCORE</th><th>TIME</th><th>PRIZE</th></tr></thead><tbody>';
+  claims.forEach((c, i) => {
+    const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+    const prize = i < prizes.length ? prizes[i] : (consolation || '—');
+    const prizeColor = i < prizes.length ? '#4d94ff' : consolation ? 'var(--orange)' : 'var(--text3)';
+    const tied = (claims[i-1] && claims[i-1].score === c.score) || (claims[i+1] && claims[i+1].score === c.score);
+    const timeSec = c.time_taken ? Math.round(c.time_taken/1000)+'s' : '—';
+    const timeCell = tied
+      ? `<span style="color:#4d94ff;font-family:'Orbitron',monospace;font-weight:700;">${timeSec}</span>`
+      : `<span style="color:var(--text2);">${timeSec}</span>`;
+    html += `<tr>
+      <td style="font-family:'Orbitron',monospace;font-size:12px;">${rankLabel}</td>
+      <td style="color:var(--text);">${c.username}<br><span style="color:var(--text3);font-size:9px;">${c.game_user_id}</span></td>
+      <td style="color:#4d94ff;font-family:'Orbitron',monospace;">${c.score}/${totalQ}</td>
+      <td style="font-size:10px;">${timeCell}</td>
+      <td style="color:${prizeColor};font-size:11px;">${prize}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  return html;
 }
 
 function renderHistoryBattle(gd, claims, gameId) {

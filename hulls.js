@@ -411,35 +411,37 @@ function renderHullsDashboard(scores) {
   document.getElementById('activePlayers').textContent = scores.length;
   const body = document.getElementById('hullsDashBody');
   const totalQ = hullsQCount || HULLS_Q_COUNT;
+  const consolation = hullsConsolationPrize || '';
   if (!scores.length) { body.innerHTML = '<div class="loading-msg" style="color:var(--text2);">WAITING FOR PLAYERS TO COMPLETE THE QUIZ...</div>'; return; }
 
   scores.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
 
-  let html = `<div style="margin-bottom:16px;font-size:10px;color:var(--text2);letter-spacing:2px;">▶ TOP ${HULLS_TOP_N} SCORERS WIN PRIZES · ${scores.length} PLAYER(S) COMPLETED · ${totalQ} QUESTIONS</div>`;
-  html += '<div style="background:var(--bg3);border:1px solid rgba(77,148,255,0.2);border-radius:4px;overflow:hidden;">';
+  let html = `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+    <div style="font-size:10px;color:var(--text2);">Questions: <span style="color:#4d94ff;">${totalQ}</span></div>
+    <div style="font-size:10px;color:var(--text2);">Top ${HULLS_TOP_N} win: <span style="color:#4d94ff;">prizes</span></div>
+    <div style="font-size:10px;color:var(--text2);">Players: <span style="color:#4d94ff;">${scores.length}</span></div>
+    ${consolation ? `<div style="font-size:10px;color:var(--text2);">Consolation: <span style="color:var(--orange);">${consolation}</span></div>` : ''}
+  </div>`;
 
+  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>SCORE</th><th>TIME</th><th>PRIZE</th></tr></thead><tbody>';
   scores.forEach((s, i) => {
-    const pal = PALETTES[i % PALETTES.length];
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const prize = i < hullsPrizes.length ? hullsPrizes[i] : null;
+    const rankLabel = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+    const prize = i < hullsPrizes.length ? hullsPrizes[i] : (consolation || '—');
+    const prizeColor = i < hullsPrizes.length ? 'var(--gold)' : consolation ? 'var(--orange)' : 'var(--text3)';
     const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
     const tied = (scores[i-1] && scores[i-1].score === s.score) || (scores[i+1] && scores[i+1].score === s.score);
-    const timeDisplay = tied
-      ? `<span style="color:#4d94ff;font-weight:700;">${timeSec}s</span>`
-      : `${timeSec}s`;
-    html += `<div class="leaderboard-row" style="border-color:${i < HULLS_TOP_N ? 'rgba(77,148,255,0.15)' : 'rgba(255,255,255,0.04)'}">
-      <div class="lb-rank ${rankClass}" style="${rankClass ? '' : `color:${pal.accent};font-size:13px;`}">${i+1}</div>
-      <div>
-        <div class="lb-name">${s.username}</div>
-        <div class="lb-time">ID: ${s.game_user_id} · ${timeDisplay}${s.tab_switches > 0 ? ` · <span style="color:var(--danger);">⚠ ${s.tab_switches} tab switch${s.tab_switches!==1?'es':''}</span>` : ''}</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="lb-score">${s.score}/${totalQ}</div>
-        ${prize ? `<div class="reward-pill">${prize}</div>` : ''}
-      </div>
-    </div>`;
+    const timeCell = tied
+      ? `<span style="color:#4d94ff;font-family:'Orbitron',monospace;font-weight:700;">${timeSec}s</span>`
+      : `<span style="color:var(--text2);">${timeSec}s</span>`;
+    html += `<tr>
+      <td style="font-family:'Orbitron',monospace;font-size:12px;">${rankLabel}</td>
+      <td style="color:var(--text);">${s.username}<br><span style="color:var(--text3);font-size:9px;">${s.game_user_id}</span></td>
+      <td style="color:#4d94ff;font-family:'Orbitron',monospace;">${s.score}/${totalQ}</td>
+      <td style="font-size:10px;">${timeCell}${s.tab_switches > 0 ? ` <span style="color:var(--danger);">⚠${s.tab_switches}</span>` : ''}</td>
+      <td style="color:${prizeColor};font-size:11px;">${prize}</td>
+    </tr>`;
   });
-  html += '</div>';
+  html += '</tbody></table>';
   body.innerHTML = html;
 }
 
@@ -775,20 +777,21 @@ async function showHullsResults(myResult, gd, allScores) {
   allScores.slice(0, 25).forEach((s, i) => {
     const isMe = s.game_user_id === currentUser.gameId;
     const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const prize = i < prizes.length ? prizes[i] : null;
+    const inTop = i < prizes.length;
+    const prize = inTop ? prizes[i] : (consolation || null);
     const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
     const tied = (allScores[i-1] && allScores[i-1].score === s.score) || (allScores[i+1] && allScores[i+1].score === s.score);
     const timeDisplay = tied
       ? `<span style="color:#4d94ff;font-weight:700;">${timeSec}s</span>`
       : `${timeSec}s`;
-    html += `<div class="leaderboard-row" style="${isMe ? 'background:rgba(77,148,255,0.08);' : ''}${i < prizes.length ? '' : 'opacity:0.6;'}">
+    html += `<div class="leaderboard-row" style="${isMe ? 'background:rgba(77,148,255,0.08);' : ''}${inTop ? '' : 'opacity:0.75;'}">
       <div class="lb-rank ${rankClass}" style="${rankClass ? '' : 'color:var(--text2);font-size:13px;'}">${i+1}</div>
       <div>
         <div class="lb-name" style="${isMe ? 'color:#4d94ff;' : ''}">${s.username}${isMe ? ' ◀ YOU' : ''}</div>
         <div class="lb-time">${timeDisplay} · ${s.score}/${totalQ} pts</div>
       </div>
       <div style="text-align:right;">
-        ${prize ? `<div class="reward-pill">${prize}</div>` : '<div style="font-size:10px;color:var(--text3);margin-top:2px;">no prize</div>'}
+        ${prize ? `<div class="reward-pill" style="${inTop ? '' : 'border-color:rgba(255,107,53,0.35);color:var(--orange);background:rgba(255,107,53,0.08);'}">${prize}</div>` : '<div style="font-size:10px;color:var(--text3);margin-top:2px;">no prize</div>'}
       </div>
     </div>`;
   });

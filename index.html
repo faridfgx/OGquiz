@@ -1951,14 +1951,19 @@ async function publishQuiz() {
     }
     selected = [...mcqPickerSelected].map(i => QUIZ_BANK[i]);
   } else {
-    // Filter bank by selected categories
+    // Filter bank by selected categories. Each player independently draws
+    // their own random questions (with possible repeats) from this pool at
+    // play time — see loadPlayerQuiz() — so the admin only needs to pick
+    // which categories are in play, not a fixed shared question set.
     const pool = QUIZ_BANK.filter(q => selectedCategories.has(q.category));
-    if (pool.length < quizQCount) {
-      warn.textContent = `⚠ ONLY ${pool.length} QUESTIONS IN SELECTED CATEGORIES — REDUCE QUESTION COUNT OR ADD MORE CATEGORIES`;
+    if (pool.length === 0) {
+      warn.textContent = `⚠ NO QUESTIONS IN SELECTED CATEGORIES — CHOOSE AT LEAST ONE CATEGORY WITH QUESTIONS`;
       warn.style.display = 'block'; setTimeout(()=>warn.style.display='none',4000); return;
     }
+    // Kept only as an admin-facing preview/reference; gameplay for random
+    // mode re-samples per player instead of using this fixed list.
     const shuffledBank = shuffle([...pool]);
-    selected = shuffledBank.slice(0, quizQCount);
+    selected = shuffledBank.slice(0, Math.min(quizQCount, pool.length));
   }
 
   if (missing > 0) {
@@ -2148,31 +2153,30 @@ function renderQuizDashboard(scores) {
   scores.sort((a, b) => (b.score - a.score) || (a.time_taken - b.time_taken));
 
   let html = `<div style="margin-bottom:16px;font-size:10px;color:var(--text2);letter-spacing:2px;">▶ TOP ${QUIZ_TOP_N} SCORERS WIN PRIZES · ${scores.length} PLAYER(S) COMPLETED · ${totalQ} QUESTIONS</div>`;
-  html += '<div style="background:var(--bg3);border:1px solid rgba(191,95,255,0.2);border-radius:4px;overflow:hidden;">';
 
+  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>SCORE</th><th>TIME</th><th>PRIZE</th></tr></thead><tbody>';
   scores.forEach((s, i) => {
-    const pal = PALETTES[i % PALETTES.length];
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const prize = i < quizPrizes.length ? quizPrizes[i] : null;
-    const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
+    const rankLabel  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+    const inTop      = i < quizPrizes.length;
+    const prize      = inTop ? quizPrizes[i] : (consolationPrize || '—');
+    const prizeColor = inTop ? 'var(--gold)' : consolationPrize ? 'var(--orange)' : 'var(--text3)';
+    const timeSec    = s.time_taken ? Math.round(s.time_taken/1000)+'s' : '—';
     const tied = (scores[i-1] && scores[i-1].score === s.score) || (scores[i+1] && scores[i+1].score === s.score);
-    const timeDisplay = tied
-      ? `<span style="color:${pal.accent};font-weight:700;">${timeSec}s</span>`
-      : `${timeSec}s`;
-    html += `<div class="leaderboard-row" style="border-color:${i < QUIZ_TOP_N ? 'rgba(191,95,255,0.15)' : 'rgba(255,255,255,0.04)'}">
-      <div class="lb-rank ${rankClass}" style="${rankClass ? '' : `color:${pal.accent};font-size:13px;`}">${i+1}</div>
-      <div>
-        <div class="lb-name">${s.username}</div>
-        
-<div class="lb-time">ID: ${s.game_user_id} · ${timeDisplay}${s.tab_switches > 0 ? ` · <span style="color:var(--danger);">⚠ ${s.tab_switches} tab switch${s.tab_switches!==1?'es':''}</span>` : ''}</div>
-      </div>
-      <div style="text-align:right;">
-        <div class="lb-score">${s.score}/${totalQ}</div>
-        ${prize ? `<div class="reward-pill">${prize}</div>` : ''}
-      </div>
-    </div>`;
+    const timeCell = tied
+      ? `<span style="color:var(--purple);font-family:'Orbitron',monospace;font-weight:700;">${timeSec}</span>`
+      : `<span style="color:var(--text2);">${timeSec}</span>`;
+    const tabWarn = s.tab_switches > 0
+      ? ` · <span style="color:var(--danger);">⚠ ${s.tab_switches} tab switch${s.tab_switches!==1?'es':''}</span>`
+      : '';
+    html += `<tr style="${inTop ? 'background:rgba(191,95,255,0.04);' : ''}">
+      <td style="font-family:'Orbitron',monospace;font-size:12px;">${rankLabel}</td>
+      <td style="color:var(--text);">${s.username}<br><span style="color:var(--text3);font-size:9px;">${s.game_user_id}${tabWarn}</span></td>
+      <td style="color:var(--purple);font-family:'Orbitron',monospace;">${s.score}/${totalQ}</td>
+      <td style="font-size:10px;">${timeCell}</td>
+      <td style="color:${prizeColor};font-size:11px;">${prize}</td>
+    </tr>`;
   });
-  html += '</div>';
+  html += '</tbody></table>';
   body.innerHTML = html;
 }
 function subscribeToQuizAdmin() {
@@ -2366,21 +2370,39 @@ async function loadPlayerQuiz(gd) {
     return;
   }
 
-  quizQuestions = gd.questions;
-  const totalQ = gd.q_count || quizQuestions.length || QUIZ_Q_COUNT;
-  quizAnswers = Array(totalQ).fill(null);
-  quizCurrent = 0;
-  quizScore = 0;
-  quizSubmitted = false;
+  const requestedQ = gd.q_count || (gd.questions && gd.questions.length) || QUIZ_Q_COUNT;
 
-  // ── Restore session if the player already started (page refresh) ──
+  // ── Restore session if the player already started (page refresh, same browser) ──
   const savedSession = loadQuizSession();
-  if (savedSession && savedSession.startTime) {
-    quizStartTime = savedSession.startTime;
-    quizCurrent   = savedSession.current  ?? 0;
-    quizScore     = savedSession.score    ?? 0;
-    quizAnswers   = savedSession.answers  ?? Array(totalQ).fill(null);
+  let totalQ = requestedQ;
+  if (savedSession && savedSession.startTime && savedSession.questions && savedSession.questions.length) {
+    // Same browser resuming mid-quiz — keep the exact question set the
+    // answers/score already correspond to.
+    quizQuestions   = savedSession.questions;
+    totalQ          = quizQuestions.length;
+    quizStartTime   = savedSession.startTime;
+    quizCurrent     = savedSession.current  ?? 0;
+    quizScore       = savedSession.score    ?? 0;
+    quizAnswers     = savedSession.answers  ?? Array(totalQ).fill(null);
+  } else {
+    // Fresh attempt — draw an independent random question set for THIS
+    // player rather than reusing one fixed set shared by every player.
+    // Questions are drawn WITHOUT replacement, so no player ever sees the
+    // same question twice within their own quiz. Hand-picked quizzes stay
+    // exactly as chosen.
+    if (gd.q_mode === 'handpick') {
+      quizQuestions = gd.questions || [];
+    } else {
+      const pool = QUIZ_BANK.filter(q => (gd.q_categories || []).includes(q.category));
+      const effectivePool = pool.length ? pool : QUIZ_BANK;
+      quizQuestions = shuffle([...effectivePool]).slice(0, Math.min(requestedQ, effectivePool.length));
+    }
+    totalQ = quizQuestions.length;
+    quizAnswers = Array(totalQ).fill(null);
+    quizCurrent = 0;
+    quizScore = 0;
   }
+  quizSubmitted = false;
 
   document.getElementById('quizStatusBadge').textContent = `ACTIVE · ${totalQ} QUESTIONS`;
     if (gd.ends_at) {
@@ -2389,7 +2411,8 @@ async function loadPlayerQuiz(gd) {
     }
 
   // If a session was restored, resume mid-quiz instead of showing the start screen
-  if (savedSession && savedSession.startTime) {
+  const resumed = savedSession && savedSession.startTime && savedSession.questions && savedSession.questions.length;
+  if (resumed) {
     if (quizCurrent < quizQuestions.length) {
       renderQuizQuestion();
     } else {
@@ -2464,7 +2487,8 @@ function saveQuizSession() {
     current:    quizCurrent,
     score:      quizScore,
     answers:    quizAnswers,
-    tabSwitches: quizTabSwitches
+    tabSwitches: quizTabSwitches,
+    questions:  quizQuestions
   };
   try { localStorage.setItem(quizStorageKey(), JSON.stringify(session)); } catch(e) {}
 }
@@ -2605,32 +2629,55 @@ async function finishQuiz() {
     <div style="margin-top:16px;font-size:11px;color:var(--text2);">Submitting score...</div>
   </div>`;
 
-  const { error } = await sb.from('constellation_claims').insert({
-    game_id:              activeQuizId,
-    constellation_index:  0,
-    username:             currentUser.username,
-    game_user_id:         currentUser.gameId,
-    score:                quizScore,
-    time_taken:           timeTaken,
-    tab_switches:         quizTabSwitches   // ← stored in DB for admin review
-  });
+  // Guard against double-submission — e.g. the same player has this quiz
+  // open in two browser tabs/windows and finishes both. Only the FIRST
+  // completed attempt for this player on this game is ever kept; any later
+  // attempt just shows that already-saved result instead of inserting a
+  // second score row.
+  const { data: preExisting } = await sb.from('constellation_claims')
+    .select('*').eq('game_id', activeQuizId).eq('game_user_id', currentUser.gameId);
+  let finalClaim;
+  if (preExisting && preExisting.length) {
+    finalClaim = preExisting[0];
+  } else {
+    const { error } = await sb.from('constellation_claims').insert({
+      game_id:              activeQuizId,
+      constellation_index:  0,
+      username:             currentUser.username,
+      game_user_id:         currentUser.gameId,
+      score:                quizScore,
+      time_taken:           timeTaken,
+      tab_switches:         quizTabSwitches   // ← stored in DB for admin review
+    });
 
-  if (error && !error.message.includes('duplicate')) {
-    document.getElementById('quizPlayerBody').innerHTML += `<div style="color:var(--danger);font-size:10px;margin-top:8px;">⚠ Error saving score: ${error.message}</div>`;
-    return;
+    finalClaim = { score: quizScore, time_taken: timeTaken };
+    if (error) {
+      if (error.message && error.message.toLowerCase().includes('duplicate')) {
+        // Another tab/window for this same player won the race — fetch the
+        // row that actually got saved and show that as the official score.
+        const { data: existingRows } = await sb.from('constellation_claims')
+          .select('*').eq('game_id', activeQuizId).eq('game_user_id', currentUser.gameId);
+        if (existingRows && existingRows.length) finalClaim = existingRows[0];
+      } else {
+        document.getElementById('quizPlayerBody').innerHTML += `<div style="color:var(--danger);font-size:10px;margin-top:8px;">⚠ Error saving score: ${error.message}</div>`;
+        return;
+      }
+    }
   }
 
   const { data: gameRow } = await sb.from('constellation_games').select('*').eq('id', activeQuizId).single();
   const { data: scores }  = await sb.from('constellation_claims').select('*').eq('game_id', activeQuizId).order('score', { ascending: false });
 
   document.getElementById('playerQuizResultPanel').style.display = 'block';
-  showQuizResults({ score: quizScore, time_taken: timeTaken }, gameRow?.data, scores || []);
+  showQuizResults(finalClaim, gameRow?.data, scores || []);
 
+  const displayScore = finalClaim.score ?? quizScore;
+  const displayTime  = finalClaim.time_taken ?? timeTaken;
   document.getElementById('quizPlayerBody').innerHTML = `<div class="quiz-score-display">
     <div style="font-size:10px;letter-spacing:3px;color:var(--purple);margin-bottom:12px;">QUIZ COMPLETE</div>
-    <div class="quiz-score-num">${quizScore}/${totalQ}</div>
+    <div class="quiz-score-num">${displayScore}/${totalQ}</div>
     <div class="quiz-score-label">YOUR FINAL SCORE</div>
-    <div style="font-size:10px;color:var(--text2);margin-top:10px;">Time: ${Math.round(timeTaken/1000)}s · Score submitted!</div>
+    <div style="font-size:10px;color:var(--text2);margin-top:10px;">Time: ${Math.round(displayTime/1000)}s · Score submitted!</div>
   </div>`;
 }
 
@@ -2711,29 +2758,28 @@ async function showQuizResults(myResult, gd, allScores) {
 
   // ── LEADERBOARD ──
   html += `<div style="font-family:'Orbitron',monospace;font-size:9px;color:var(--text2);letter-spacing:2px;margin-bottom:10px;">▶ LEADERBOARD (${allScores.length} player${allScores.length !== 1 ? 's' : ''})</div>`;
-  html += '<div style="background:var(--bg3);border:1px solid rgba(191,95,255,0.2);border-radius:4px;overflow:hidden;">';
 
+  html += '<table class="admin-table"><thead><tr><th>RANK</th><th>PLAYER</th><th>SCORE</th><th>TIME</th><th>PRIZE</th></tr></thead><tbody>';
   allScores.slice(0, 25).forEach((s, i) => {
     const isMe = s.game_user_id === currentUser.gameId;
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const prize = i < prizes.length ? prizes[i] : null;
-    const timeSec = s.time_taken ? Math.round(s.time_taken/1000) : '?';
+    const rankLabel  = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+    const inTop      = i < prizes.length;
+    const prize      = inTop ? prizes[i] : (consolation || '—');
+    const prizeColor = inTop ? 'var(--gold)' : consolation ? 'var(--orange)' : 'var(--text3)';
+    const timeSec    = s.time_taken ? Math.round(s.time_taken/1000)+'s' : '—';
     const tied = (allScores[i-1] && allScores[i-1].score === s.score) || (allScores[i+1] && allScores[i+1].score === s.score);
-    const timeDisplay = tied
-      ? `<span style="color:var(--purple);font-weight:700;">${timeSec}s</span>`
-      : `${timeSec}s`;
-    html += `<div class="leaderboard-row" style="${isMe ? 'background:rgba(191,95,255,0.08);' : ''}${i < prizes.length ? '' : 'opacity:0.6;'}">
-      <div class="lb-rank ${rankClass}" style="${rankClass ? '' : 'color:var(--text2);font-size:13px;'}">${i+1}</div>
-      <div>
-        <div class="lb-name" style="${isMe ? 'color:var(--purple);' : ''}">${s.username}${isMe ? ' ◀ YOU' : ''}</div>
-        <div class="lb-time">${timeDisplay} · ${s.score}/${totalQ} pts</div>
-      </div>
-      <div style="text-align:right;">
-        ${prize ? `<div class="reward-pill">${prize}</div>` : '<div style="font-size:10px;color:var(--text3);margin-top:2px;">no prize</div>'}
-      </div>
-    </div>`;
+    const timeCell = tied
+      ? `<span style="color:var(--purple);font-family:'Orbitron',monospace;font-weight:700;">${timeSec}</span>`
+      : `<span style="color:var(--text2);">${timeSec}</span>`;
+    html += `<tr style="${isMe ? 'background:rgba(191,95,255,0.10);' : inTop ? 'background:rgba(191,95,255,0.04);' : ''}">
+      <td style="font-family:'Orbitron',monospace;font-size:12px;">${rankLabel}</td>
+      <td style="color:${isMe ? 'var(--purple)' : 'var(--text)'};">${s.username}${isMe ? ' ◀ YOU' : ''}<br><span style="color:var(--text3);font-size:9px;">${s.game_user_id}</span></td>
+      <td style="color:var(--purple);font-family:'Orbitron',monospace;">${s.score}/${totalQ}</td>
+      <td style="font-size:10px;">${timeCell}</td>
+      <td style="color:${prizeColor};font-size:11px;">${prize}</td>
+    </tr>`;
   });
-  html += '</div>';
+  html += '</tbody></table>';
 
   document.getElementById('playerQuizResultBody').innerHTML = html;
 

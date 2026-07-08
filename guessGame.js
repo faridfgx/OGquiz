@@ -1,4 +1,3 @@
-
 // ── State ────────────────────────────────────────────────────────────────
 let guessGameId       = null;
 let guessChannel      = null;
@@ -126,15 +125,15 @@ async function publishGuessGame() {
   }
   warn.style.display = 'none';
 
-  // Pick random commanders
-  const pool = [...(window.commandersList || [])];
-  const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, guessCount);
+  // NOTE: the admin only picks HOW MANY commanders each player will face
+  // (guessCount). The actual commanders are no longer chosen once here and
+  // shared by every player — each player independently draws their own
+  // random set (with possible repeats) at play time. See loadPlayerGuess().
 
   const gameId  = 'GUE_' + Date.now();
   const endsAt   = typeof getSelectedEndsAt === 'function' ? getSelectedEndsAt() : null;
   const gameData = {
     id: gameId, mode: 'guess',
-    commanders: shuffled,
     count: guessCount,
     prizes: guessPrizes,
     consolation_prize: guessConsolation || '',
@@ -217,9 +216,56 @@ function subscribeToGuessAdmin() {
 // ════════════════════════════════════════════════════════════════════════
 // PLAYER — GUESS GAME
 // ════════════════════════════════════════════════════════════════════════
+
+// Draws up to `n` items at random from `pool` WITHOUT repeats — each player
+// gets their own random set (independent of every other player), but never
+// sees the same item twice within their own game. Caps to pool size if the
+// pool has fewer items than requested.
+function sampleUnique(pool, n) {
+  if (!pool || !pool.length) return [];
+  const shuffled = pool.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, Math.min(n, shuffled.length));
+}
+
+// Per-browser cache so a page refresh mid-game keeps the SAME commander set
+// (answers stay valid), but a different browser/device gets a brand-new
+// random draw rather than the exact same questions.
+function guessCommandersStorageKey() {
+  return `guess_commanders_${guessGameId}_${currentUser.gameId}`;
+}
+function loadGuessCommandersSession() {
+  try {
+    const raw = localStorage.getItem(guessCommandersStorageKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function saveGuessCommandersSession(list) {
+  try { localStorage.setItem(guessCommandersStorageKey(), JSON.stringify(list)); } catch (e) {}
+}
+function clearGuessCommandersSession() {
+  try { localStorage.removeItem(guessCommandersStorageKey()); } catch (e) {}
+}
+
 async function loadPlayerGuess(gd) {
-  guessCommanders = gd.commanders || [];
-  guessCount      = gd.count || guessCommanders.length;
+  guessCount = gd.count || (window.commandersList || []).length;
+
+  // Reuse the set already drawn for this browser/session if present;
+  // otherwise draw a fresh independent random set for THIS player, with
+  // no repeats within their own game.
+  const cached = loadGuessCommandersSession();
+  if (cached && cached.length) {
+    guessCommanders = cached;
+  } else {
+    const pool = (window.commandersList && window.commandersList.length) ? window.commandersList : (gd.commanders || []);
+    guessCommanders = sampleUnique(pool, guessCount);
+    saveGuessCommandersSession(guessCommanders);
+  }
+  guessCount = guessCommanders.length;
+
   guessSubmitted  = false;
   guessAnswers    = {};
   guessChoices    = [];
@@ -516,6 +562,24 @@ async function submitGuessGame(forcedGd) {
   if (guessSubmitted) return;
   guessSubmitted = true;
   if (guessTimerHandle) clearInterval(guessTimerHandle);
+  clearGuessCommandersSession();
+
+  // Guard against double-submission — e.g. the same player has this game
+  // open in two browser tabs/windows and finishes both. Only the FIRST
+  // completed attempt for this player on this game is ever kept; any later
+  // attempt just shows that already-saved result instead of inserting a
+  // second score row.
+  const { data: preExisting } = await sb.from('constellation_claims')
+    .select('*').eq('game_id', guessGameId).eq('game_user_id', currentUser.gameId);
+  if (preExisting && preExisting.length) {
+    let gdExisting = forcedGd;
+    if (!gdExisting) {
+      const { data } = await sb.from('constellation_games').select('data').eq('id', guessGameId).single();
+      gdExisting = data?.data || {};
+    }
+    showGuessResults(preExisting[0], gdExisting);
+    return;
+  }
 
   const timeTaken = Date.now() - guessStartTime;
   let nameHits = 0, skillHits = 0;
@@ -578,7 +642,7 @@ async function showGuessResults(claim, gd) {
   const body        = document.getElementById('guessPlayerBody');
   const prizes       = gd.prizes || [];
   const consolation  = gd.consolation_prize || '';
-  const total        = gd.commanders?.length || guessCount;
+  const total        = gd.count || guessCount;
   const timeSec      = claim.time_taken ? Math.round(claim.time_taken / 1000) : '?';
 
   // Fetch leaderboard to work out rank

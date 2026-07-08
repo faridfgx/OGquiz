@@ -372,7 +372,11 @@ async function publishHulls() {
   const endsAt  = getSelectedEndsAt();
   const gameData = {
     id: gameId, mode: 'hulls',
-    questions: selected,
+    // Hand-pick mode ships the exact fixed set to every player (that's the point
+    // of hand-picking). Random mode ships NO fixed set — each player draws their
+    // own sample from q_categories at quiz-start time (see drawHullsQuestions()),
+    // so different players — and the same player restarting — get different questions.
+    questions: hullsQMode === 'handpick' ? selected : null,
     q_count: actualCount,
     q_mode: hullsQMode,
     q_categories: hullsQMode === 'random' ? [...hullsSelectedCategories] : null,
@@ -463,20 +467,25 @@ async function loadPlayerHulls(gd) {
     return;
   }
 
-  hullsQuestions = gd.questions;
-  const totalQ = gd.q_count || hullsQuestions.length || HULLS_Q_COUNT;
+  hullsGameData = gd; // kept around so startHulls() can draw a fresh sample per attempt
+  const totalQ = gd.q_count || HULLS_Q_COUNT;
+  hullsQuestions = null; // not drawn yet — happens in startHulls()
   hullsAnswers = Array(totalQ).fill(null);
   hullsCurrent = 0;
   hullsScore = 0;
   hullsSubmitted = false;
 
   // ── Restore session if the player already started (page refresh) ──
+  // Only restores mid-quiz progress; the drawn question set is part of the
+  // saved session so a refresh continues with the SAME questions the player
+  // was already answering (it does not get rerolled mid-attempt).
   const savedSession = loadHullsSession();
-  if (savedSession && savedSession.startTime) {
+  if (savedSession && savedSession.startTime && savedSession.questions) {
     hullsStartTime = savedSession.startTime;
     hullsCurrent   = savedSession.current  ?? 0;
     hullsScore     = savedSession.score    ?? 0;
     hullsAnswers   = savedSession.answers  ?? Array(totalQ).fill(null);
+    hullsQuestions = savedSession.questions;
   }
 
   document.getElementById('hullsStatusBadge').textContent = `ACTIVE · ${totalQ} QUESTIONS`;
@@ -485,7 +494,7 @@ async function loadPlayerHulls(gd) {
     startPlayerTimer(badge, gd.ends_at, () => loadPlayerView());
   }
 
-  if (savedSession && savedSession.startTime) {
+  if (hullsQuestions) {
     if (hullsCurrent < hullsQuestions.length) {
       renderHullsQuestion();
     } else {
@@ -558,7 +567,8 @@ function saveHullsSession() {
     current:    hullsCurrent,
     score:      hullsScore,
     answers:    hullsAnswers,
-    tabSwitches: hullsTabSwitches
+    tabSwitches: hullsTabSwitches,
+    questions:  hullsQuestions // pins this attempt's draw so a refresh doesn't reroll it
   };
   try { localStorage.setItem(hullsStorageKey(), JSON.stringify(session)); } catch(e) {}
 }
@@ -576,20 +586,41 @@ function clearHullsSession() {
 
 function startHulls() {
   const existing = loadHullsSession();
-  if (existing && existing.startTime) {
+  if (existing && existing.startTime && existing.questions) {
+    // Resuming a refresh mid-quiz — keep the exact same questions/order.
     hullsStartTime   = existing.startTime;
     hullsTabSwitches = existing.tabSwitches ?? 0;
+    hullsQuestions   = existing.questions;
   } else {
     hullsStartTime   = Date.now();
     hullsTabSwitches = 0;
-    // Shuffle questions once per player-session
-    hullsQuestions = shuffleArray([...hullsQuestions]);
-    // Shuffle choices within each question
-    hullsQuestions = hullsQuestions.map(q => shuffleOptions(q));
+    // Fresh attempt — draw a brand-new random sample from the pool every time.
+    // In random mode this means every player, and every restart before
+    // submitting, gets a different set of questions (may still overlap/repeat
+    // since draws are independent — that's expected).
+    hullsQuestions = drawHullsQuestions(hullsGameData);
   }
   saveHullsSession();
   startHullsTabWatcher();
   renderHullsQuestion();
+}
+
+// Builds this attempt's question set.
+// - handpick mode: admin's fixed list, shared by all players — just randomize
+//   order + option order so it doesn't feel identical between players.
+// - random mode: pull a fresh random sample of size q_count straight from
+//   HULLS_BANK (filtered to the chosen categories), independently each call.
+function drawHullsQuestions(gd) {
+  const totalQ = gd?.q_count || HULLS_Q_COUNT;
+
+  if (gd?.q_mode === 'handpick') {
+    const fixedSet = gd.questions || [];
+    return shuffleArray([...fixedSet]).map(q => shuffleOptions(q));
+  }
+
+  const pool = HULLS_BANK.filter(q => (gd?.q_categories || []).includes(q.category));
+  const drawn = shuffleArray([...pool]).slice(0, totalQ);
+  return drawn.map(q => shuffleOptions(q));
 }
 
 function renderHullsQuestion() {

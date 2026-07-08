@@ -21,6 +21,9 @@
 <meta name="twitter:description" content="Open Galaxy event platform — giveaway & quiz system.">
 <meta name="twitter:image" content="https://stellar-events.site/og-image.png">
 
+<!-- Discord embed color (used for the little accent bar on the left) -->
+<meta name="theme-color" content="#00d4ff">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
@@ -850,7 +853,7 @@ const QUIZ_Q_COUNT = 10;
 const QUIZ_TOP_N = 5;
 const HULLS_Q_COUNT = 10;
 const HULLS_TOP_N = 5;
-
+let hullsGameData = null;
 const SUPABASE_URL  = 'https://brtylfnzrcljicppargr.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJydHlsZm56cmNsamljcHBhcmdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3MjU2OTMsImV4cCI6MjA3NzMwMTY5M30.cUFqyzyOlrJuM_CxdQcokXfj5-5NUnLorIriEHWDl2I';
 
@@ -1459,7 +1462,7 @@ async function loadPlayerHistory() {
         ? `<span style="color:#4d94ff;">${claim.score ?? '?'}/${totalQ}</span> <span style="color:#4d94ff;font-weight:700;">· ${myTimeSec}</span>`
         : `<span style="color:#4d94ff;">${claim.score ?? '?'}/${totalQ}</span>`;
       const myPrize = myRank > 0 && myRank <= prizes.length ? prizes[myRank - 1] : null;
-      prizeHtml = myPrize ? `<span style="color:var(--gold);">🏆 ${myPrize}</span>` : consol ? `<span style="color:var(--orange);">${consol}</span>` : '';
+      prizeHtml = myPrize ? `<span style="color:#4d94ff;">🏆 ${myPrize}</span>` : consol ? `<span style="color:var(--orange);">${consol}</span>` : '';
     }
 
     const modeColor = mode === 'quiz' ? 'var(--purple)' : mode === 'memory' ? '#00ffcc' : mode === 'guess' ? '#ffa500' : mode === 'battle' ? 'var(--accent3)' : mode === 'hulls' ? '#4d94ff' : 'var(--gold)';
